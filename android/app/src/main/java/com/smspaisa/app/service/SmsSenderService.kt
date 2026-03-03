@@ -51,7 +51,7 @@ class SmsSenderService : Service() {
         private const val SMS_DELAY_MIN_MILLIS = 3000L
         private const val SMS_DELAY_MAX_MILLIS = 5000L
         private const val MIN_PHONE_NUMBER_DIGITS = 5
-        private const val EARNINGS_PER_SMS = 0.16
+        private const val EARNINGS_PER_SMS = 0.12
         private const val MAX_REPORT_RETRIES = 3
         private const val RETRY_DELAY_BASE_MS = 1000L
         private const val ROUND_SUMMARY_DISPLAY_DURATION_MS = 5_000L
