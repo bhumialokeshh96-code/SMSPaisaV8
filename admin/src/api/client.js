@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://smspaisav2-env.eba-dvwrwwc7.ap-south-1.elasticbeanstalk.com';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://smspaisav8.onrender.com';
 
 const client = axios.create({
   baseURL: API_BASE_URL,
