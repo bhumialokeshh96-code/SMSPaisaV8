@@ -104,7 +104,7 @@ fun UpdateDialog(
                                 modifier = Modifier.fillMaxWidth(),
                             )
                             Text(
-                                text = "${state.progress}%"
+                                text = "${state.progress}%%,"
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.align(Alignment.End)
