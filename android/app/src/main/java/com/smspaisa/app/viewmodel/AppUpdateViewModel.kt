@@ -51,6 +51,10 @@ class AppUpdateViewModel @Inject constructor(
         }
     }
 
+    fun installApk(downloadId: Long) {
+        ApkDownloadManager.installApk(context, downloadId)
+    }
+
     fun resetDownload() {
         _downloadState.value = DownloadState.Idle
     }
