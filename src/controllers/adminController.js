@@ -28,12 +28,57 @@ const listUsers = async (req, res) => {
 
 const getUserById = async (req, res) => {
   try {
+    const { page = 1, limit = 20 } = req.query;
+    const { skip, take } = paginate(page, limit);
+
     const user = await prisma.user.findUnique({
       where: { id: req.params.id },
-      include: { wallet: true, devices: true },
+      include: {
+        wallet: true,
+        devices: true,
+        referralsMade: {
+          include: { referred: { select: { id: true, phone: true, name: true } } },
+        },
+        referralReceived: {
+          include: { referrer: { select: { id: true, phone: true, name: true } } },
+        },
+        paymentAccounts: true,
+      },
     });
+
     if (!user) return errorResponse(res, 'User not found', 'NOT_FOUND', 404);
-    return successResponse(res, { user });
+
+    const statusFilter = req.query.status;
+    const whereClause = { userId: req.params.id };
+    if (statusFilter && ['SENT', 'DELIVERED', 'FAILED'].includes(statusFilter)) {
+      whereClause.status = statusFilter;
+    }
+
+    const [smsLogs, smsLogsTotal] = await Promise.all([
+      prisma.smsLog.findMany({
+        where: whereClause,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: {
+          task: { select: { recipient: true, message: true, clientId: true } },
+        },
+      }),
+      prisma.smsLog.count({ where: whereClause }),
+    ]);
+
+    const [sentCount, deliveredCount, failedCount] = await Promise.all([
+      prisma.smsLog.count({ where: { userId: req.params.id, status: 'SENT' } }),
+      prisma.smsLog.count({ where: { userId: req.params.id, status: 'DELIVERED' } }),
+      prisma.smsLog.count({ where: { userId: req.params.id, status: 'FAILED' } }),
+    ]);
+
+    return successResponse(res, {
+      user,
+      smsLogs,
+      smsLogsPagination: paginationMeta(smsLogsTotal, Number(page), Number(limit)),
+      smsStats: { sent: sentCount, delivered: deliveredCount, failed: failedCount, total: smsLogsTotal },
+    });
   } catch (err) {
     console.error('getUserById error:', err);
     return errorResponse(res, 'Failed to get user', 'SERVER_ERROR', 500);
