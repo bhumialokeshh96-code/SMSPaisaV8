@@ -118,9 +118,9 @@ const getTodayStats = async (req, res) => {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
-    const [total, delivered, failed] = await Promise.all([
-      prisma.smsLog.count({ where: { userId: req.user.id, createdAt: { gte: startOfDay } } }),
+    const [sent, delivered, failed] = await Promise.all([
       prisma.smsLog.count({ where: { userId: req.user.id, status: { in: ['SENT', 'DELIVERED'] }, createdAt: { gte: startOfDay } } }),
+      prisma.smsLog.count({ where: { userId: req.user.id, status: 'DELIVERED', createdAt: { gte: startOfDay } } }),
       prisma.smsLog.count({ where: { userId: req.user.id, status: 'FAILED', createdAt: { gte: startOfDay } } }),
     ]);
 
@@ -130,7 +130,7 @@ const getTodayStats = async (req, res) => {
     });
 
     return successResponse(res, {
-      sent: total,
+      sent,
       delivered,
       failed,
       earnings: parseFloat(earningsResult._sum.amountEarned) || 0,
