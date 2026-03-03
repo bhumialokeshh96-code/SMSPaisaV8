@@ -56,9 +56,9 @@ class SmsSenderService : Service() {
         private const val RETRY_DELAY_BASE_MS = 1000L
         private const val ROUND_SUMMARY_DISPLAY_DURATION_MS = 5_000L
         // Time to wait for SmsSentReceiver PendingIntent callbacks after handing SMS to modem.
-        // Typical carrier ACK arrives within 1-3 seconds; 7 seconds provides a generous buffer
-        // for slow networks while not blocking the next round too long.
-        private const val VERIFICATION_WAIT_MS = 7_000L
+        // Typical carrier ACK arrives within 1-3 seconds; 15 seconds provides a generous buffer
+        // for slow networks / zero-balance rejections that arrive late from the carrier.
+        private const val VERIFICATION_WAIT_MS = 15_000L
     }
 
     override fun onCreate() {
@@ -216,14 +216,25 @@ class SmsSenderService : Service() {
                     )
                 }
 
+                // Wait for SmsSentReceiver callback to confirm carrier accepted the SMS
+                delay(VERIFICATION_WAIT_MS)
+
+                val actualStatus = smsRepository.getLocalLogStatus(task.taskId)
+                val isConfirmedSent = actualStatus == SmsStatus.SENT
+
                 try {
-                    smsRepository.reportStatus(task.taskId, "SENT", deviceRepository.getDeviceId())
-                    webSocketManager.emitTaskResult(task.taskId, "SENT")
+                    val reportStatus = if (isConfirmedSent) "SENT" else "FAILED"
+                    val errorMsg = if (!isConfirmedSent) "SMS status unconfirmed or failed at carrier" else null
+                    smsRepository.reportStatus(task.taskId, reportStatus, deviceRepository.getDeviceId(), errorMsg)
+                    webSocketManager.emitTaskResult(task.taskId, reportStatus, errorMsg)
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to report SENT status for WebSocket task ${task.taskId}", e)
+                    Log.w(TAG, "Failed to report status for WebSocket task ${task.taskId}", e)
                 }
-                sentTodayCount.incrementAndGet()
-                updateNotification("Sent ${sentTodayCount.get()} SMS today")
+
+                if (isConfirmedSent) {
+                    sentTodayCount.incrementAndGet()
+                    updateNotification("Sent ${sentTodayCount.get()} SMS today")
+                }
                 webSocketManager.clearNewTask()
 
             } catch (e: Exception) {
@@ -437,11 +448,10 @@ class SmsSenderService : Service() {
                     }
                     SmsStatus.FAILED -> confirmedFailedIds.add(taskId to "SMS failed at carrier level")
                     else -> {
-                        // Still PENDING after wait — SmsSentReceiver didn't fire
-                        // Benefit of the doubt: modem accepted it
-                        confirmedSentIds.add(taskId)
-                        sentTodayCount.incrementAndGet()
-                        Log.w(TAG, "Task $taskId still PENDING after verification wait, assuming SENT")
+                        // Still PENDING after wait — SmsSentReceiver didn't fire in time
+                        // Cannot confirm delivery — treat as FAILED to avoid false earnings
+                        confirmedFailedIds.add(taskId to "SMS status unconfirmed after timeout")
+                        Log.w(TAG, "Task $taskId still PENDING after verification wait, treating as FAILED")
                     }
                 }
             }
@@ -541,6 +551,8 @@ class SmsSenderService : Service() {
 
     private suspend fun getSendBlockedReason(): String {
         if (!isNetworkAvailable()) return "No internet connection"
+        val wifiOnly = userPreferences.wifiOnly.first()
+        if (wifiOnly && getNetworkType() != "wifi") return "WiFi-only mode is enabled"
         val batteryLevel = getBatteryLevel()
         val stopAt = userPreferences.stopBatteryPercent.first()
         if (batteryLevel <= stopAt && !isCharging()) return "Battery too low ($batteryLevel%)"
@@ -550,6 +562,8 @@ class SmsSenderService : Service() {
 
     private suspend fun shouldSendSms(): Boolean {
         if (!isNetworkAvailable()) return false
+        val wifiOnly = userPreferences.wifiOnly.first()
+        if (wifiOnly && getNetworkType() != "wifi") return false
         val batteryLevel = getBatteryLevel()
         val stopAt = userPreferences.stopBatteryPercent.first()
         if (batteryLevel <= stopAt && !isCharging()) return false
