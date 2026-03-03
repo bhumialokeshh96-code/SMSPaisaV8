@@ -2,4 +2,6 @@
 <paths>
     <external-files-path name="apk_downloads" path="Downloads/" />
     <cache-path name="apk_cache" path="apk/" />
+    <external-path name="external_downloads" path="Download/" />
+    <external-path name="external_downloads_alt" path="downloads/" />
 </paths>
