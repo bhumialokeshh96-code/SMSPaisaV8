@@ -4,6 +4,7 @@ import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
 import android.os.Environment
+import android.widget.Toast
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -91,20 +92,49 @@ object ApkDownloadManager {
 
     fun installApk(context: Context, fileName: String = "SMSPaisa_update.apk") {
         val apkFile = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
-        if (!apkFile.exists()) return
 
-        val apkUri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            apkFile
-        )
-
-        val installIntent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
-            setDataAndType(apkUri, "application/vnd.android.package-archive")
-            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
-                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+        if (!apkFile.exists()) {
+            Toast.makeText(
+                context,
+                "APK file not found. Please download again.",
+                Toast.LENGTH_LONG
+            ).show()
+            return
         }
-        context.startActivity(installIntent)
+
+        try {
+            val apkUri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                apkFile
+            )
+
+            val installIntent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                setDataAndType(apkUri, "application/vnd.android.package-archive")
+                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            }
+            context.startActivity(installIntent)
+        } catch (e: android.content.ActivityNotFoundException) {
+            Toast.makeText(
+                context,
+                "No app found to install APK. Please install manually from Downloads folder.",
+                Toast.LENGTH_LONG
+            ).show()
+        } catch (e: IllegalArgumentException) {
+            // FileProvider could not find the file in configured paths
+            Toast.makeText(
+                context,
+                "Install error: File path not accessible. Please download again.",
+                Toast.LENGTH_LONG
+            ).show()
+        } catch (e: Exception) {
+            Toast.makeText(
+                context,
+                "Install failed: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 
     fun canInstallUnknownApps(context: Context): Boolean {
