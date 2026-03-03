@@ -32,11 +32,9 @@ fun UpdateDialog(
     val isForced = versionInfo.forceUpdate
     val downloadState by viewModel.downloadState.collectAsState()
 
-    // Launcher to go to install permission settings and come back
     val installPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) {
-        // User came back from settings — check if permission granted now
         if (ApkDownloadManager.canInstallUnknownApps(context)) {
             viewModel.startDownload(versionInfo.apkUrl)
         }
@@ -106,7 +104,7 @@ fun UpdateDialog(
                                 modifier = Modifier.fillMaxWidth(),
                             )
                             Text(
-                                text = "${state.progress}%",
+                                text = "${state.progress}%%",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.align(Alignment.End)
@@ -135,13 +133,11 @@ fun UpdateDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    when (downloadState) {
+                    when (val state = downloadState) {
                         is DownloadState.Idle -> {
-                            // Check install permission first
                             if (ApkDownloadManager.canInstallUnknownApps(context)) {
                                 viewModel.startDownload(versionInfo.apkUrl)
                             } else {
-                                // Open settings to grant permission
                                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                                     val intent = Intent(
                                         Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
@@ -154,11 +150,9 @@ fun UpdateDialog(
                             }
                         }
                         is DownloadState.Done -> {
-                            // Trigger install
-                            ApkDownloadManager.installApk(context)
+                            viewModel.installApk(state.downloadId)
                         }
                         is DownloadState.Error -> {
-                            // Retry
                             viewModel.resetDownload()
                         }
                         is DownloadState.Starting -> { /* wait */ }
