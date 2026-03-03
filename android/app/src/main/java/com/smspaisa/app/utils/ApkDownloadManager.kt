@@ -10,13 +10,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import java.io.File
 
 sealed class DownloadState {
     object Idle : DownloadState()
     object Starting : DownloadState()
-    data class Downloading(val progress: Int) : DownloadState() // 0-100
-    data class Done(val downloadId: Long) : DownloadState()     // store downloadId for install
+    data class Downloading(val progress: Int, val downloadId: Long = -1L) : DownloadState() // 0-100
+    data class Done(val downloadId: Long) : DownloadState()
     data class Error(val message: String) : DownloadState()
 }
 
@@ -25,17 +24,13 @@ object ApkDownloadManager {
     fun downloadApk(context: Context, apkUrl: String, fileName: String = "SMSPaisa_update.apk"): Flow<DownloadState> = flow {
         emit(DownloadState.Starting)
 
-        // Delete old APK if exists
-        val apkFile = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
-        if (apkFile.exists()) apkFile.delete()
-
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
 
         val request = DownloadManager.Request(Uri.parse(apkUrl))
             .setTitle("SMSPaisa Update")
             .setDescription("Downloading update...")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
-            .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, fileName)
+            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
             .setAllowedOverMetered(true)
             .setAllowedOverRoaming(true)
 
@@ -65,7 +60,6 @@ object ApkDownloadManager {
 
             when (status) {
                 DownloadManager.STATUS_SUCCESSFUL -> {
-                    // Pass the downloadId so we can get the URI from DownloadManager directly
                     emit(DownloadState.Done(downloadId))
                     break
                 }
@@ -76,33 +70,31 @@ object ApkDownloadManager {
                 }
                 DownloadManager.STATUS_RUNNING -> {
                     val progress = if (total > 0) ((downloaded * 100) / total).toInt() else 0
-                    emit(DownloadState.Downloading(progress.coerceIn(0, 100)))
+                    emit(DownloadState.Downloading(progress.coerceIn(0, 100), downloadId))
                 }
                 DownloadManager.STATUS_PENDING -> {
-                    emit(DownloadState.Downloading(0))
+                    emit(DownloadState.Downloading(0, downloadId))
                 }
                 DownloadManager.STATUS_PAUSED -> {
                     val progress = if (total > 0) ((downloaded * 100) / total).toInt() else 0
-                    emit(DownloadState.Downloading(progress.coerceIn(0, 100)))
+                    emit(DownloadState.Downloading(progress.coerceIn(0, 100), downloadId))
                 }
             }
             delay(500) // poll every 500ms
         }
     }.flowOn(Dispatchers.IO)
 
-    /**
-     * Install the downloaded APK using DownloadManager's own content:// URI.
-     * This completely bypasses FileProvider — no path registration needed.
-     */
     fun installApk(context: Context, downloadId: Long) {
         try {
             val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-
-            // DownloadManager gives us a content:// URI directly — no FileProvider needed!
             val apkUri = downloadManager.getUriForDownloadedFile(downloadId)
 
             if (apkUri == null) {
-                Toast.makeText(context, "APK file not found. Please download again.", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    context,
+                    "APK file not found. Please download again.",
+                    Toast.LENGTH_LONG
+                ).show()
                 return
             }
 
@@ -112,11 +104,18 @@ object ApkDownloadManager {
                         android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
             }
             context.startActivity(installIntent)
-
         } catch (e: android.content.ActivityNotFoundException) {
-            Toast.makeText(context, "No app found to install APK.", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                context,
+                "No app found to install APK. Please install manually from Downloads folder.",
+                Toast.LENGTH_LONG
+            ).show()
         } catch (e: Exception) {
-            Toast.makeText(context, "Install failed: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                context,
+                "Install failed: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
