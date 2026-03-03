@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+
+    <!-- Default: block HTTP -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    
+    <!-- Allow HTTP only for EB domain -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">
+            smspaisav2-env.eba-dvwrwwc7.ap-south-1.elasticbeanstalk.com
+        </domain>
+    </domain-config>
+    
+</network-security-config>

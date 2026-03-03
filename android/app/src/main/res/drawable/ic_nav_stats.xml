@@ -1,0 +1,41 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Yellow Bar 1 -->
+    <path
+        android:fillColor="#F9A825"
+        android:pathData="M12,60 H24 V96 H12 Z" />
+
+    <!-- Red Bar -->
+    <path
+        android:fillColor="#EF5350"
+        android:pathData="M36,44 H48 V96 H36 Z" />
+
+    <!-- Blue Bar -->
+    <path
+        android:fillColor="#1E88E5"
+        android:pathData="M60,52 H72 V96 H60 Z" />
+
+    <!-- Yellow Bar 2 -->
+    <path
+        android:fillColor="#F9A825"
+        android:pathData="M84,32 H96 V96 H84 Z" />
+
+    <!-- Green Growth Line -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#7CB342"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,68 L36,48 L60,58 L84,40" />
+
+    <!-- Arrow Head -->
+    <path
+        android:fillColor="#7CB342"
+        android:pathData="M84,32 L102,40 L84,48 Z" />
+
+</vector>

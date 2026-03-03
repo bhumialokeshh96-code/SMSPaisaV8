@@ -1,0 +1,69 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Monitor Frame -->
+    <path
+        android:fillColor="#0B5345"
+        android:pathData="M12,24 h84 a8,8 0 0 1 8,8 v44 a8,8 0 0 1 -8,8 h-84 a8,8 0 0 1 -8,-8 v-44 a8,8 0 0 1 8,-8 z"/>
+
+    <!-- Screen Background -->
+    <path
+        android:fillColor="#ECEFF1"
+        android:pathData="M20,32 h68 v36 h-68 z"/>
+
+    <!-- Top Pink Header -->
+    <path
+        android:fillColor="#EC407A"
+        android:pathData="M20,32 h68 v10 h-68 z"/>
+
+    <!-- Header Dots -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M28,37 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0"/>
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,37 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0"/>
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,37 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0"/>
+
+    <!-- Profile Circle -->
+    <path
+        android:fillColor="#CFD8DC"
+        android:pathData="M34,54 m-8,0 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0"/>
+
+    <!-- Avatar Head -->
+    <path
+        android:fillColor="#FBC02D"
+        android:pathData="M34,52 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0"/>
+
+    <!-- Avatar Body -->
+    <path
+        android:fillColor="#E53935"
+        android:pathData="M28,60 a6,4 0 0 1 12,0 z"/>
+
+    <!-- Text Lines -->
+    <path android:fillColor="#B0BEC5" android:pathData="M48,50 h30 v3 h-30 z"/>
+    <path android:fillColor="#B0BEC5" android:pathData="M48,56 h26 v3 h-26 z"/>
+
+    <!-- Bottom Colored Boxes -->
+    <path android:fillColor="#7E57C2" android:pathData="M28,66 h10 v8 h-10 z"/>
+    <path android:fillColor="#FDD835" android:pathData="M48,66 h10 v8 h-10 z"/>
+    <path android:fillColor="#7CB342" android:pathData="M68,66 h10 v8 h-10 z"/>
+
+    <!-- Stand -->
+    <path
+        android:fillColor="#B0BEC5"
+        android:pathData="M48,84 h12 v6 h-12 z"/>
+
+    <!-- Base -->
+    <path
+        android:fillColor="#0B5345"
+        android:pathData="M40,92 h28 v6 h-28 z"/>
+
+</vector>

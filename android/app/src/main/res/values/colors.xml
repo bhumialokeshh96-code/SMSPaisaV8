@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#2196F3</color>
+    <color name="secondary">#4CAF50</color>
+    <color name="tertiary">#FF9800</color>
+    <color name="error">#F44336</color>
+    <color name="background">#FAFAFA</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="on_secondary">#FFFFFF</color>
+    <color name="on_background">#1A1C1E</color>
+    <color name="on_surface">#1A1C1E</color>
+    <color name="status_delivered">#4CAF50</color>
+    <color name="status_sent">#2196F3</color>
+    <color name="status_failed">#F44336</color>
+    <color name="status_pending">#FF9800</color>
+</resources>

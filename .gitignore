@@ -1,0 +1,18 @@
+node_modules/
+.env
+dist/
+.DS_Store
+*.log
+
+# Android build artifacts
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/**/*.iml
+android/.idea/
+# android/app/google-services.json is committed as a placeholder for CI builds
+
+# Admin panel
+admin/node_modules/
+admin/dist/

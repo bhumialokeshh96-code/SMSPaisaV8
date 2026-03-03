@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SMSPaisa</string>
+    <string name="app_description">Earn money by sending SMS</string>
+    <string name="notification_channel_name">SMS Sender Service</string>
+    <string name="notification_channel_description">Background SMS sending service for earning money</string>
+    <string name="service_running">SMSPaisa service is running</string>
+    <string name="service_stopped">SMSPaisa service stopped</string>
+    <string name="permission_sms_rationale">SMSPaisa needs SMS permission to send messages and earn money for you.</string>
+    <string name="permission_phone_rationale">SMSPaisa needs phone permission to identify your device and SIM cards.</string>
+    <string name="error_network">Network error. Please check your connection.</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="success_otp_sent">OTP sent successfully</string>
+    <string name="success_withdrawal">Withdrawal request submitted</string>
+    <string name="label_balance">Available Balance</string>
+    <string name="label_total_earned">Total Earned</string>
+    <string name="label_pending">Pending</string>
+    <string name="button_start">START</string>
+    <string name="button_stop">STOP</string>
+    <string name="button_withdraw">Withdraw</string>
+    <string name="button_history">History</string>
+    <string name="button_send_otp">Send OTP</string>
+    <string name="button_verify_otp">Verify OTP</string>
+    <string name="button_get_started">Get Started</string>
+    <string name="bottom_nav_home">Home</string>
+    <string name="bottom_nav_stats">Stats</string>
+    <string name="bottom_nav_withdraw">Withdraw</string>
+    <string name="bottom_nav_profile">Profile</string>
+</resources>

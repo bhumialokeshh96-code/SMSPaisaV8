@@ -1,0 +1,14 @@
+const constants = {
+  SMS_RATE_PER_DELIVERY: parseFloat(process.env.SMS_RATE_PER_DELIVERY) || 0.16,
+  SMS_DEFAULT_DAILY_LIMIT: parseInt(process.env.SMS_DEFAULT_DAILY_LIMIT) || 300,
+  MIN_WITHDRAWAL_AMOUNT: parseFloat(process.env.MIN_WITHDRAWAL_AMOUNT) || 50,
+  MAX_WITHDRAWAL_PER_DAY: parseFloat(process.env.MAX_WITHDRAWAL_PER_DAY) || 10000,
+  REFERRAL_BONUS_REFERRER: parseFloat(process.env.REFERRAL_BONUS_REFERRER) || 10,
+  REFERRAL_BONUS_REFERRED: parseFloat(process.env.REFERRAL_BONUS_REFERRED) || 5,
+  REFERRAL_QUALIFYING_SMS: parseInt(process.env.REFERRAL_QUALIFYING_SMS) || 100,
+  TASK_TIMEOUT_SECONDS: 60,
+  DEFAULT_PAGE_LIMIT: 20,
+  MAX_PAGE_LIMIT: 100,
+};
+
+module.exports = constants;
