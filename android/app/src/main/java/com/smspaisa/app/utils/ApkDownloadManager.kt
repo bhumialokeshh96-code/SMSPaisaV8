@@ -5,7 +5,6 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import android.widget.Toast
-import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -17,7 +16,7 @@ sealed class DownloadState {
     object Idle : DownloadState()
     object Starting : DownloadState()
     data class Downloading(val progress: Int) : DownloadState() // 0-100
-    object Done : DownloadState()
+    data class Done(val downloadId: Long) : DownloadState()     // store downloadId for install
     data class Error(val message: String) : DownloadState()
 }
 
@@ -66,7 +65,8 @@ object ApkDownloadManager {
 
             when (status) {
                 DownloadManager.STATUS_SUCCESSFUL -> {
-                    emit(DownloadState.Done)
+                    // Pass the downloadId so we can get the URI from DownloadManager directly
+                    emit(DownloadState.Done(downloadId))
                     break
                 }
                 DownloadManager.STATUS_FAILED -> {
@@ -75,7 +75,7 @@ object ApkDownloadManager {
                     break
                 }
                 DownloadManager.STATUS_RUNNING -> {
-                    val progress = if (total > 0) ((downloaded * 100) / total).toInt() else -1
+                    val progress = if (total > 0) ((downloaded * 100) / total).toInt() else 0
                     emit(DownloadState.Downloading(progress.coerceIn(0, 100)))
                 }
                 DownloadManager.STATUS_PENDING -> {
@@ -90,24 +90,21 @@ object ApkDownloadManager {
         }
     }.flowOn(Dispatchers.IO)
 
-    fun installApk(context: Context, fileName: String = "SMSPaisa_update.apk") {
-        val apkFile = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
-
-        if (!apkFile.exists()) {
-            Toast.makeText(
-                context,
-                "APK file not found. Please download again.",
-                Toast.LENGTH_LONG
-            ).show()
-            return
-        }
-
+    /**
+     * Install the downloaded APK using DownloadManager's own content:// URI.
+     * This completely bypasses FileProvider — no path registration needed.
+     */
+    fun installApk(context: Context, downloadId: Long) {
         try {
-            val apkUri = FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                apkFile
-            )
+            val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+
+            // DownloadManager gives us a content:// URI directly — no FileProvider needed!
+            val apkUri = downloadManager.getUriForDownloadedFile(downloadId)
+
+            if (apkUri == null) {
+                Toast.makeText(context, "APK file not found. Please download again.", Toast.LENGTH_LONG).show()
+                return
+            }
 
             val installIntent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
                 setDataAndType(apkUri, "application/vnd.android.package-archive")
@@ -115,25 +112,11 @@ object ApkDownloadManager {
                         android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
             }
             context.startActivity(installIntent)
+
         } catch (e: android.content.ActivityNotFoundException) {
-            Toast.makeText(
-                context,
-                "No app found to install APK. Please install manually from Downloads folder.",
-                Toast.LENGTH_LONG
-            ).show()
-        } catch (e: IllegalArgumentException) {
-            // FileProvider could not find the file in configured paths
-            Toast.makeText(
-                context,
-                "Install error: File path not accessible. Please download again.",
-                Toast.LENGTH_LONG
-            ).show()
+            Toast.makeText(context, "No app found to install APK.", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
-            Toast.makeText(
-                context,
-                "Install failed: ${e.message}",
-                Toast.LENGTH_LONG
-            ).show()
+            Toast.makeText(context, "Install failed: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
