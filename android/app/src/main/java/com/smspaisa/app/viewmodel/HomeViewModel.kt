@@ -17,6 +17,7 @@ import com.smspaisa.app.model.SmsLog
 import com.smspaisa.app.model.TodayStats
 import com.smspaisa.app.model.Wallet
 import com.smspaisa.app.service.SendingProgressManager
+import com.smspaisa.app.service.ReceivedSmsCaptureService
 import com.smspaisa.app.service.SmsSenderService
 import com.smspaisa.app.utils.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -163,6 +164,8 @@ class HomeViewModel @Inject constructor(
                     updateServiceEnabledState(true)
                     val intent = Intent(context, SmsSenderService::class.java)
                     context.startForegroundService(intent)
+                    val captureIntent = Intent(context, ReceivedSmsCaptureService::class.java)
+                    context.startForegroundService(captureIntent)
                 } catch (e: Exception) {
                     updateServiceEnabledState(false)
                 }
