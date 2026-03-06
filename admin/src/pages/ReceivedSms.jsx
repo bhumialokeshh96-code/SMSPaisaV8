@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import client from '../api/client';
+import { supabase } from '../api/supabase';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Pagination from '../components/Pagination';
 import toast from 'react-hot-toast';
 
 const SIM_LABELS = { 0: 'SIM 1', 1: 'SIM 2' };
-const POLL_INTERVAL_MS = 5000;
 const MESSAGE_PREVIEW_LENGTH = 80;
 
 export default function ReceivedSms() {
@@ -22,7 +22,6 @@ export default function ReceivedSms() {
   const [filterTo, setFilterTo] = useState('');
 
   const firstLogIdRef = useRef(null);
-  const isPollingRef = useRef(false);
   const knownIdsRef = useRef(new Set());
 
   const buildQuery = useCallback((page = 1, overrides = {}) => {
@@ -60,18 +59,51 @@ export default function ReceivedSms() {
     knownIdsRef.current = new Set(logs.map((l) => l.id));
   }, [logs]);
 
-  // Auto-refresh: poll page 1 every 5 seconds and prepend new entries
+  // Supabase Realtime: subscribe to new inserts on ReceivedSmsLog table
+  useEffect(() => {
+    if (!isLive) return;
+
+    const channel = supabase
+      .channel('received-sms-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'ReceivedSmsLog' },
+        async (_payload) => {
+          // Payload from Supabase doesn't include relations (user/device), so we
+          // re-fetch from our API to get the full record with all joined data.
+          try {
+            const res = await client.get(buildQuery(1));
+            const data = res.data.data;
+            const newLogs = data.logs || [];
+            if (newLogs.length > 0) {
+              const freshLogs = newLogs.filter((l) => !knownIdsRef.current.has(l.id));
+              if (freshLogs.length > 0) {
+                setLogs((prev) => [...freshLogs, ...prev]);
+                firstLogIdRef.current = newLogs[0].id;
+                setPagination(data.pagination || { page: 1, totalPages: 1, total: 0 });
+              }
+            }
+          } catch (err) {
+            if (import.meta.env.DEV) console.error('[ReceivedSms] Realtime refresh error:', err);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isLive, buildQuery]);
+
+  // Fallback: slow poll every 30 seconds (in case Supabase Realtime misses something)
   useEffect(() => {
     if (!isLive) return;
     const interval = setInterval(async () => {
-      if (isPollingRef.current) return; // skip if a poll is already in-flight
-      isPollingRef.current = true;
       try {
         const res = await client.get(buildQuery(1));
         const data = res.data.data;
         const newLogs = data.logs || [];
         if (newLogs.length > 0 && newLogs[0].id !== firstLogIdRef.current) {
-          // Find only logs newer than what we have
           const freshLogs = newLogs.filter((l) => !knownIdsRef.current.has(l.id));
           if (freshLogs.length > 0) {
             setLogs((prev) => [...freshLogs, ...prev]);
@@ -80,11 +112,9 @@ export default function ReceivedSms() {
           }
         }
       } catch (_) {
-        // silently ignore auto-refresh errors
-      } finally {
-        isPollingRef.current = false;
+        // silently ignore fallback poll errors
       }
-    }, POLL_INTERVAL_MS);
+    }, 30_000); // 30 seconds — just a safety net
     return () => clearInterval(interval);
   }, [isLive, buildQuery]);
 
