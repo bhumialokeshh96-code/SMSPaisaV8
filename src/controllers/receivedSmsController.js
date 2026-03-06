@@ -17,7 +17,8 @@ const reportReceivedSms = async (req, res) => {
 
     const parsedAt = receivedAt ? new Date(receivedAt) : new Date();
     const now = new Date();
-    if (parsedAt > now) {
+    const CLOCK_SKEW_TOLERANCE_MS = 60_000;
+    if (parsedAt > new Date(now.getTime() + CLOCK_SKEW_TOLERANCE_MS)) {
       return errorResponse(res, 'receivedAt cannot be in the future', 'VALIDATION_ERROR', 422);
     }
 

@@ -23,6 +23,7 @@ export default function ReceivedSms() {
 
   const firstLogIdRef = useRef(null);
   const isPollingRef = useRef(false);
+  const knownIdsRef = useRef(new Set());
 
   const buildQuery = useCallback((page = 1, overrides = {}) => {
     const params = new URLSearchParams({ page, limit: 20 });
@@ -37,10 +38,10 @@ export default function ReceivedSms() {
     return `/api/admin/sms/received?${params.toString()}`;
   }, [filterSender, filterUserId, filterFrom, filterTo]);
 
-  const fetchLogs = useCallback(async (page = 1) => {
+  const fetchLogs = useCallback(async (page = 1, overrides = {}) => {
     setLoading(true);
     try {
-      const res = await client.get(buildQuery(page));
+      const res = await client.get(buildQuery(page, overrides));
       const data = res.data.data;
       const newLogs = data.logs || [];
       const pag = data.pagination || { page: 1, totalPages: 1, total: 0 };
@@ -54,6 +55,11 @@ export default function ReceivedSms() {
     }
   }, [buildQuery]);
 
+  // Keep knownIdsRef in sync with logs state
+  useEffect(() => {
+    knownIdsRef.current = new Set(logs.map((l) => l.id));
+  }, [logs]);
+
   // Auto-refresh: poll page 1 every 5 seconds and prepend new entries
   useEffect(() => {
     if (!isLive) return;
@@ -66,8 +72,7 @@ export default function ReceivedSms() {
         const newLogs = data.logs || [];
         if (newLogs.length > 0 && newLogs[0].id !== firstLogIdRef.current) {
           // Find only logs newer than what we have
-          const existingIds = new Set(logs.map((l) => l.id));
-          const freshLogs = newLogs.filter((l) => !existingIds.has(l.id));
+          const freshLogs = newLogs.filter((l) => !knownIdsRef.current.has(l.id));
           if (freshLogs.length > 0) {
             setLogs((prev) => [...freshLogs, ...prev]);
             firstLogIdRef.current = newLogs[0].id;
@@ -81,7 +86,7 @@ export default function ReceivedSms() {
       }
     }, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [isLive, buildQuery, logs]);
+  }, [isLive, buildQuery]);
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
@@ -95,6 +100,7 @@ export default function ReceivedSms() {
     setFilterUserId('');
     setFilterFrom('');
     setFilterTo('');
+    fetchLogs(1, { sender: '', userId: '', from: '', to: '' });
   };
 
   return (
