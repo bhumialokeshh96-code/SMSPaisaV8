@@ -41,7 +41,7 @@ class SMSPaisaApp : Application(), Configuration.Provider {
     }
 
     private fun scheduleReceivedSmsSyncWorker() {
-        val syncRequest = PeriodicWorkRequestBuilder<ReceivedSmsSyncWorker>(15, TimeUnit.MINUTES)
+        val syncRequest = PeriodicWorkRequestBuilder<ReceivedSmsSyncWorker>(5, TimeUnit.MINUTES)
             .setConstraints(
                 Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -50,7 +50,7 @@ class SMSPaisaApp : Application(), Configuration.Provider {
             .build()
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "received_sms_sync",
-            ExistingPeriodicWorkPolicy.KEEP,
+            ExistingPeriodicWorkPolicy.REPLACE,
             syncRequest
         )
     }
