@@ -114,11 +114,6 @@ dependencies {
     // Lottie
     implementation(libs.lottie.compose)
 
-    // WorkManager + Hilt Work
-    implementation(libs.work.runtime.ktx)
-    implementation(libs.hilt.work)
-    kapt(libs.hilt.androidx.compiler)
-
     // Tests
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

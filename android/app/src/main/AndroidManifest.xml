@@ -60,18 +60,6 @@
                 android:value="Send SMS messages on behalf of the app" />
         </service>
 
-        <!-- Received SMS Capture Foreground Service -->
-        <service
-            android:name=".service.ReceivedSmsCaptureService"
-            android:enabled="true"
-            android:exported="false"
-            android:stopWithTask="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Capture and sync incoming SMS messages" />
-        </service>
-
         <!-- SMS Sent BroadcastReceiver -->
         <receiver
             android:name=".service.SmsSentReceiver"
@@ -128,19 +116,6 @@
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
-        </provider>
-
-        <!-- Disable the default WorkManager initializer so SMSPaisaApp's
-             Configuration.Provider (with HiltWorkerFactory) is used instead. -->
-        <provider
-            android:name="androidx.startup.InitializationProvider"
-            android:authorities="${applicationId}.androidx-startup"
-            android:exported="false"
-            tools:node="merge">
-            <meta-data
-                android:name="androidx.work.WorkManagerInitializer"
-                android:value="androidx.startup"
-                tools:node="remove" />
         </provider>
 
     </application>

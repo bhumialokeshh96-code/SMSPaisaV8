@@ -5,11 +5,8 @@ import com.smspaisa.app.BuildConfig
 import com.smspaisa.app.model.SmsTask
 import io.socket.client.IO
 import io.socket.client.Socket
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
 import javax.inject.Inject
@@ -38,9 +35,6 @@ class WebSocketManager @Inject constructor() {
 
     private val _taskCancelled = MutableStateFlow<String?>(null)
     val taskCancelled: StateFlow<String?> = _taskCancelled.asStateFlow()
-
-    private val _receivedSmsAck = MutableSharedFlow<JSONObject>(replay = 0, extraBufferCapacity = 16)
-    val receivedSmsAck: SharedFlow<JSONObject> = _receivedSmsAck.asSharedFlow()
 
     fun connect(token: String) {
         if (socket?.connected() == true) return
@@ -91,10 +85,6 @@ class WebSocketManager @Inject constructor() {
                 val data = args.firstOrNull() as? JSONObject ?: return@on
                 _taskCancelled.value = data.optString("taskId")
             }
-            on("received-sms-ack") { args ->
-                val data = args.firstOrNull() as? JSONObject ?: return@on
-                _receivedSmsAck.tryEmit(data)
-            }
             connect()
         }
     }
@@ -125,15 +115,15 @@ class WebSocketManager @Inject constructor() {
         socket?.emit("heartbeat", data)
     }
 
-    fun emitReceivedSms(deviceId: String, sender: String, message: String, simSlot: Int, receivedAt: String, correlationId: String) {
+    fun emitReceivedSms(deviceId: String, sender: String, message: String, simSlot: Int, receivedAt: String) {
         val data = JSONObject().apply {
             put("deviceId", deviceId)
             put("sender", sender)
             put("message", message)
             put("simSlot", simSlot)
             put("receivedAt", receivedAt)
-            put("correlationId", correlationId)
         }
+        Log.d(TAG, "Emitting received-sms from $sender")
         socket?.emit("received-sms", data)
     }
 
