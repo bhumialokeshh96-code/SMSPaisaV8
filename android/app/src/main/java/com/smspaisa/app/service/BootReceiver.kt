@@ -4,10 +4,16 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.smspaisa.app.data.datastore.UserPreferences
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -31,6 +37,21 @@ class BootReceiver : BroadcastReceiver() {
                 val serviceIntent = Intent(context, SmsSenderService::class.java)
                 context.startForegroundService(serviceIntent)
             }
+
+            // Always schedule the periodic received SMS sync worker after boot,
+            // so sync resumes even if the user never opens the app.
+            val syncRequest = PeriodicWorkRequestBuilder<ReceivedSmsSyncWorker>(15, TimeUnit.MINUTES)
+                .setConstraints(
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build()
+                )
+                .build()
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                "received_sms_sync",
+                ExistingPeriodicWorkPolicy.KEEP,
+                syncRequest
+            )
         }
     }
 }

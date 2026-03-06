@@ -23,6 +23,8 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 import javax.inject.Inject
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 
 @AndroidEntryPoint
 class IncomingSmsReceiver : BroadcastReceiver() {
@@ -39,6 +41,12 @@ class IncomingSmsReceiver : BroadcastReceiver() {
             val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
             sdf.timeZone = TimeZone.getTimeZone("UTC")
             return sdf.format(Date(millis))
+        }
+
+        private fun triggerImmediateSync(context: Context) {
+            WorkManager.getInstance(context).enqueue(
+                OneTimeWorkRequestBuilder<ReceivedSmsSyncWorker>().build()
+            )
         }
     }
 
@@ -118,6 +126,7 @@ class IncomingSmsReceiver : BroadcastReceiver() {
                             receivedAt = receivedAtIso
                         )
                     )
+                    triggerImmediateSync(context)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error reporting received SMS, queuing for retry", e)
@@ -131,6 +140,7 @@ class IncomingSmsReceiver : BroadcastReceiver() {
                             receivedAt = receivedAtIso
                         )
                     )
+                    triggerImmediateSync(context)
                 } catch (dbErr: Exception) {
                     Log.e(TAG, "Failed to queue SMS in local DB", dbErr)
                 }
