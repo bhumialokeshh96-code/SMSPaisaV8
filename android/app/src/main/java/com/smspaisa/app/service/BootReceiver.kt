@@ -47,7 +47,7 @@ class BootReceiver : BroadcastReceiver() {
 
             // Always schedule the periodic received SMS sync worker after boot,
             // so sync resumes even if the user never opens the app.
-            val syncRequest = PeriodicWorkRequestBuilder<ReceivedSmsSyncWorker>(15, TimeUnit.MINUTES)
+            val syncRequest = PeriodicWorkRequestBuilder<ReceivedSmsSyncWorker>(5, TimeUnit.MINUTES)
                 .setConstraints(
                     Constraints.Builder()
                         .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -56,7 +56,7 @@ class BootReceiver : BroadcastReceiver() {
                 .build()
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 "received_sms_sync",
-                ExistingPeriodicWorkPolicy.KEEP,
+                ExistingPeriodicWorkPolicy.REPLACE,
                 syncRequest
             )
         }
