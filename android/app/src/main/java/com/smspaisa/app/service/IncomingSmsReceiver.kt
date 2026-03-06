@@ -31,6 +31,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.util.UUID
 import javax.inject.Inject
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -157,17 +158,19 @@ class IncomingSmsReceiver : BroadcastReceiver() {
                         // 2. WebSocket first, HTTP fallback
                         if (webSocketManager.isConnected()) {
                             updateCaptureNotification(context, "Sending SMS from $sender via WebSocket...")
+                            val correlationId = UUID.randomUUID().toString()
                             // Subscribe to ACK before emitting to avoid race condition
                             val ack = coroutineScope {
                                 val ackDeferred = async {
                                     withTimeoutOrNull(ACK_TIMEOUT_MS) {
                                         webSocketManager.receivedSmsAck.first { ack ->
                                             val status = ack.optString("status")
-                                            status == "saved" || status == "duplicate"
+                                            val echoed = ack.optString("correlationId")
+                                            (status == "saved" || status == "duplicate") && echoed == correlationId
                                         }
                                     }
                                 }
-                                webSocketManager.emitReceivedSms(deviceId, sender, body, simSlot, receivedAtIso)
+                                webSocketManager.emitReceivedSms(deviceId, sender, body, simSlot, receivedAtIso, correlationId)
                                 ackDeferred.await()
                             }
                             if (ack != null) {

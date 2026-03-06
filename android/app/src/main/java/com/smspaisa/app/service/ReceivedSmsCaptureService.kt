@@ -23,6 +23,7 @@ import com.smspaisa.app.data.local.PendingReceivedSmsDao
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
+import java.util.UUID
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -136,17 +137,19 @@ class ReceivedSmsCaptureService : Service() {
                     // Try WebSocket first; fall back to HTTP if not connected or ACK times out
                     val syncedViaWs = if (webSocketManager.isConnected()) {
                         coroutineScope {
+                            val correlationId = UUID.randomUUID().toString()
                             val ackDeferred = async {
                                 withTimeoutOrNull(WS_ACK_TIMEOUT_MS) {
                                     webSocketManager.receivedSmsAck.first { ack ->
                                         val status = ack.optString("status")
-                                        status == "saved" || status == "duplicate"
+                                        val echoed = ack.optString("correlationId")
+                                        (status == "saved" || status == "duplicate") && echoed == correlationId
                                     }
                                 }
                             }
                             webSocketManager.emitReceivedSms(
                                 pending.deviceId, pending.sender, pending.message,
-                                pending.simSlot, pending.receivedAt
+                                pending.simSlot, pending.receivedAt, correlationId
                             )
                             ackDeferred.await() != null
                         }

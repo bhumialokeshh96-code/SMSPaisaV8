@@ -125,13 +125,14 @@ class WebSocketManager @Inject constructor() {
         socket?.emit("heartbeat", data)
     }
 
-    fun emitReceivedSms(deviceId: String, sender: String, message: String, simSlot: Int, receivedAt: String) {
+    fun emitReceivedSms(deviceId: String, sender: String, message: String, simSlot: Int, receivedAt: String, correlationId: String) {
         val data = JSONObject().apply {
             put("deviceId", deviceId)
             put("sender", sender)
             put("message", message)
             put("simSlot", simSlot)
             put("receivedAt", receivedAt)
+            put("correlationId", correlationId)
         }
         socket?.emit("received-sms", data)
     }
