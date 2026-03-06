@@ -55,14 +55,15 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  wallet          Wallet?
-  devices         Device[]
-  smsTasks        SmsTask[]        @relation("AssignedTasks")
-  smsLogs         SmsLog[]
-  transactions    Transaction[]
-  referralsMade   Referral[]       @relation("ReferrerRelation")
-  referralReceived Referral?       @relation("ReferredRelation")
-  paymentAccounts PaymentAccount[]
+  wallet           Wallet?
+  devices          Device[]
+  smsTasks         SmsTask[]        @relation("AssignedTasks")
+  smsLogs          SmsLog[]
+  transactions     Transaction[]
+  referralsMade    Referral[]       @relation("ReferrerRelation")
+  referralReceived Referral?        @relation("ReferredRelation")
+  paymentAccounts  PaymentAccount[]
+  receivedSmsLogs  ReceivedSmsLog[]
 }
 
 model Wallet {
@@ -138,7 +139,22 @@ model Device {
   smsSentToday     Int       @default(0)
   createdAt        DateTime  @default(now())
 
-  smsTasks SmsTask[]
+  smsTasks         SmsTask[]
+  receivedSmsLogs  ReceivedSmsLog[]
+}
+
+model ReceivedSmsLog {
+  id         String   @id @default(uuid())
+  userId     String
+  deviceId   String
+  sender     String
+  message    String
+  simSlot    Int      @default(0)
+  receivedAt DateTime
+  createdAt  DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  device Device @relation(fields: [deviceId], references: [id])
 }
 
 model Referral {

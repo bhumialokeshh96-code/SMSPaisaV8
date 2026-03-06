@@ -16,6 +16,7 @@ import Transactions from './pages/Transactions';
 import Settings from './pages/Settings';
 
 import AppVersion from './pages/AppVersion';
+import ReceivedSms from './pages/ReceivedSms';
 
 export default function App() {
   return (
@@ -39,6 +40,7 @@ export default function App() {
                   <Route path="/transactions" element={<Transactions />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/app-version" element={<AppVersion />} />
+                  <Route path="/sms/received" element={<ReceivedSms />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

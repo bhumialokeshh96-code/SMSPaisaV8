@@ -112,6 +112,15 @@ data class AppVersionResponse(
     @SerializedName("forceUpdate") val forceUpdate: Boolean = false,
 )
 
+@Keep
+data class ReportReceivedSmsRequest(
+    @SerializedName("deviceId") val deviceId: String,
+    @SerializedName("sender") val sender: String,
+    @SerializedName("message") val message: String,
+    @SerializedName("simSlot") val simSlot: Int,
+    @SerializedName("receivedAt") val receivedAt: Long
+)
+
 // --- Batch Tasks ---
 
 @Keep
@@ -233,6 +242,9 @@ interface ApiService {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 20
     ): Response<ApiResponse<List<SmsLog>>>
+
+    @POST("api/sms/received")
+    suspend fun reportReceivedSms(@Body request: ReportReceivedSmsRequest): Response<Unit>
 
     // --- Wallet ---
 

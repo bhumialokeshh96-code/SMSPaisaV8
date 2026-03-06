@@ -1,12 +1,13 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { BarChart3, Users, MessageSquare, ClipboardList, Wallet, Smartphone, CreditCard, Settings, PackageOpen } from 'lucide-react';
+import { BarChart3, Users, MessageSquare, ClipboardList, Wallet, Smartphone, CreditCard, Settings, PackageOpen, Inbox } from 'lucide-react';
 
 const navItems = [
   { to: '/', label: 'Dashboard', Icon: BarChart3, end: true },
   { to: '/users', label: 'Users', Icon: Users },
   { to: '/sms', label: 'SMS Tasks', Icon: MessageSquare },
   { to: '/sms/logs', label: 'SMS Logs', Icon: ClipboardList },
+  { to: '/sms/received', label: 'Received SMS', Icon: Inbox },
   { to: '/withdrawals', label: 'Withdrawals', Icon: Wallet },
   { to: '/devices', label: 'Devices', Icon: Smartphone },
   { to: '/transactions', label: 'Transactions', Icon: CreditCard },
