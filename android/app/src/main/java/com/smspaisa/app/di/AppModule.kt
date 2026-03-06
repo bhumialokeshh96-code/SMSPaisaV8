@@ -9,6 +9,7 @@ import com.smspaisa.app.data.api.ApiService
 import com.smspaisa.app.data.api.AuthInterceptor
 import com.smspaisa.app.data.datastore.UserPreferences
 import com.smspaisa.app.data.local.AppDatabase
+import com.smspaisa.app.data.local.PendingReceivedSmsDao
 import com.smspaisa.app.data.local.SmsLogDao
 import dagger.Module
 import dagger.Provides
@@ -69,7 +70,8 @@ object AppModule {
             context,
             AppDatabase::class.java,
             "smspaisa_database"
-        ).fallbackToDestructiveMigration()
+        ).addMigrations(AppDatabase.MIGRATION_1_2)
+            .fallbackToDestructiveMigration()
             .build()
     }
 
@@ -77,5 +79,11 @@ object AppModule {
     @Singleton
     fun provideSmsLogDao(database: AppDatabase): SmsLogDao {
         return database.smsLogDao()
+    }
+
+    @Provides
+    @Singleton
+    fun providePendingReceivedSmsDao(database: AppDatabase): PendingReceivedSmsDao {
+        return database.pendingReceivedSmsDao()
     }
 }

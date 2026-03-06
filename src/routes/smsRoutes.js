@@ -4,6 +4,7 @@ const { getNextTask, reportStatus, getTodayStats, getSmsLog, getBatchTasks } = r
 const { reportReceivedSms } = require('../controllers/receivedSmsController');
 const { authenticate } = require('../middleware/auth');
 const { validate, schemas } = require('../middleware/validation');
+const { receivedSmsRateLimit } = require('../middleware/rateLimit');
 
 router.use(authenticate);
 
@@ -12,6 +13,6 @@ router.get('/batch-tasks', getBatchTasks);
 router.post('/report-status', validate(schemas.reportStatus), reportStatus);
 router.get('/today-stats', getTodayStats);
 router.get('/log', getSmsLog);
-router.post('/received', reportReceivedSms);
+router.post('/received', receivedSmsRateLimit, validate(schemas.reportReceivedSms), reportReceivedSms);
 
 module.exports = router;

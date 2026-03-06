@@ -118,7 +118,7 @@ data class ReportReceivedSmsRequest(
     @SerializedName("sender") val sender: String,
     @SerializedName("message") val message: String,
     @SerializedName("simSlot") val simSlot: Int,
-    @SerializedName("receivedAt") val receivedAt: Long
+    @SerializedName("receivedAt") val receivedAt: String // ISO 8601 string
 )
 
 // --- Batch Tasks ---

@@ -155,6 +155,11 @@ model ReceivedSmsLog {
 
   user   User   @relation(fields: [userId], references: [id])
   device Device @relation(fields: [deviceId], references: [id])
+
+  @@unique([userId, sender, receivedAt])
+  @@index([receivedAt])
+  @@index([userId])
+  @@index([sender])
 }
 
 model Referral {

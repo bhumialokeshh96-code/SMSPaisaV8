@@ -120,6 +120,17 @@ const schemas = {
     currentPassword: Joi.string().required(),
     newPassword: Joi.string().min(6).required(),
   }),
+
+  reportReceivedSms: Joi.object({
+    deviceId: Joi.string().required().max(128),
+    sender: Joi.string().required().max(30),
+    message: Joi.string().required().max(1600),
+    simSlot: Joi.number().integer().min(0).max(1).default(0),
+    receivedAt: Joi.alternatives().try(
+      Joi.number().integer().positive(),
+      Joi.string().isoDate()
+    ).optional(),
+  }),
 };
 
 module.exports = { validate, schemas };
