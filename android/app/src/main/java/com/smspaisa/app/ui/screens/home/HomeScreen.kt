@@ -66,6 +66,8 @@ fun HomeScreen(
             add(Manifest.permission.SEND_SMS)
             add(Manifest.permission.READ_PHONE_STATE)
             add(Manifest.permission.READ_PHONE_NUMBERS)
+            add(Manifest.permission.RECEIVE_SMS)
+            add(Manifest.permission.READ_SMS)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 add(Manifest.permission.POST_NOTIFICATIONS)
             }

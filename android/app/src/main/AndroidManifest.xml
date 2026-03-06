@@ -58,6 +58,14 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Send SMS messages on behalf of the app" />
         </service>
+        <!-- Incoming SMS BroadcastReceiver -->
+<receiver
+    android:name=".service.IncomingSmsReceiver"
+    android:exported="false">
+    <intent-filter android:priority="999">
+        <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+    </intent-filter>
+</receiver>
 
         <!-- SMS Sent BroadcastReceiver -->
         <receiver
