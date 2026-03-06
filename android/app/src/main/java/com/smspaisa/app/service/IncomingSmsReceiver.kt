@@ -13,6 +13,7 @@ import androidx.core.app.NotificationCompat
 import com.smspaisa.app.R
 import com.smspaisa.app.data.api.ApiService
 import com.smspaisa.app.data.api.ReportReceivedSmsRequest
+import com.smspaisa.app.data.api.WebSocketManager
 import com.smspaisa.app.data.datastore.UserPreferences
 import com.smspaisa.app.data.local.PendingReceivedSmsDao
 import com.smspaisa.app.data.local.PendingReceivedSmsEntity
@@ -20,13 +21,17 @@ import com.smspaisa.app.data.repository.DeviceRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.util.UUID
 import javax.inject.Inject
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -38,11 +43,13 @@ class IncomingSmsReceiver : BroadcastReceiver() {
     @Inject lateinit var userPreferences: UserPreferences
     @Inject lateinit var deviceRepository: DeviceRepository
     @Inject lateinit var pendingReceivedSmsDao: PendingReceivedSmsDao
+    @Inject lateinit var webSocketManager: WebSocketManager
 
     companion object {
         private const val TAG = "IncomingSmsReceiver"
         private const val WAKE_LOCK_TIMEOUT_MS = 60_000L  // 60-second timeout as safety net
         private const val OPERATION_TIMEOUT_MS = 55_000L  // stay within the wake lock window
+        private const val ACK_TIMEOUT_MS = 10_000L        // wait up to 10s for WebSocket ACK
 
         fun epochMillisToIso8601(millis: Long): String {
             val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
@@ -136,51 +143,91 @@ class IncomingSmsReceiver : BroadcastReceiver() {
                         updateCaptureNotification(context, "❌ Failed to get deviceId: ${e.message?.take(60) ?: "Unknown error"}")
                         return@withTimeout
                     }
+                    var pendingId: Long? = null
                     try {
-                        updateCaptureNotification(context, "Reporting SMS from $sender to server...")
-                        val request = ReportReceivedSmsRequest(
+                        // 1. Always save to Room DB first — guarantees no SMS is ever lost
+                        val pendingEntity = PendingReceivedSmsEntity(
                             deviceId = deviceId,
                             sender = sender,
                             message = body,
                             simSlot = simSlot,
                             receivedAt = receivedAtIso
                         )
-                        val response = apiService.reportReceivedSms(request)
-                        if (response.isSuccessful) {
-                            Log.d(TAG, "Successfully reported received SMS to server")
-                            updateCaptureNotification(context, "✅ SMS from $sender reported! Waiting...")
+                        pendingId = pendingReceivedSmsDao.insert(pendingEntity)
+
+                        // 2. WebSocket first, HTTP fallback
+                        if (webSocketManager.isConnected()) {
+                            updateCaptureNotification(context, "Sending SMS from $sender via WebSocket...")
+                            val correlationId = UUID.randomUUID().toString()
+                            // Subscribe to ACK before emitting to avoid race condition
+                            val ack = coroutineScope {
+                                val ackDeferred = async {
+                                    withTimeoutOrNull(ACK_TIMEOUT_MS) {
+                                        webSocketManager.receivedSmsAck.first { ack ->
+                                            val status = ack.optString("status")
+                                            val echoed = ack.optString("correlationId")
+                                            (status == "saved" || status == "duplicate") && echoed == correlationId
+                                        }
+                                    }
+                                }
+                                webSocketManager.emitReceivedSms(deviceId, sender, body, simSlot, receivedAtIso, correlationId)
+                                ackDeferred.await()
+                            }
+                            if (ack != null) {
+                                Log.d(TAG, "WebSocket ACK received (status=${ack.optString("status")}), deleting from local DB")
+                                pendingReceivedSmsDao.deleteById(pendingId)
+                                updateCaptureNotification(context, "✅ SMS from $sender sent via WebSocket!")
+                            } else {
+                                Log.w(TAG, "WebSocket ACK timeout, leaving SMS in local DB for sync service")
+                                updateCaptureNotification(context, "SMS queued for retry (WS timeout)...")
+                                triggerImmediateSync(context)
+                            }
                         } else {
-                            val errMsg = response.message().take(60)
-                            Log.w(TAG, "Failed to report received SMS: ${response.code()}, queuing for retry")
-                            updateCaptureNotification(context, "❌ Server error ${response.code()}: $errMsg. Queued")
-                            pendingReceivedSmsDao.insert(
-                                PendingReceivedSmsEntity(
-                                    deviceId = deviceId,
-                                    sender = sender,
-                                    message = body,
-                                    simSlot = simSlot,
-                                    receivedAt = receivedAtIso
-                                )
+                            // HTTP fallback
+                            updateCaptureNotification(context, "Reporting SMS from $sender to server...")
+                            val request = ReportReceivedSmsRequest(
+                                deviceId = deviceId,
+                                sender = sender,
+                                message = body,
+                                simSlot = simSlot,
+                                receivedAt = receivedAtIso
                             )
-                            triggerImmediateSync(context)
+                            val response = apiService.reportReceivedSms(request)
+                            if (response.isSuccessful) {
+                                Log.d(TAG, "Successfully reported received SMS via HTTP")
+                                pendingReceivedSmsDao.deleteById(pendingId)
+                                updateCaptureNotification(context, "✅ SMS from $sender reported!")
+                            } else {
+                                val errMsg = response.message().take(60)
+                                Log.w(TAG, "Failed to report received SMS: ${response.code()}, will retry via sync service")
+                                updateCaptureNotification(context, "❌ Server error ${response.code()}: $errMsg. Queued")
+                                pendingReceivedSmsDao.incrementRetryCount(pendingId)
+                                triggerImmediateSync(context)
+                            }
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Error reporting received SMS, queuing for retry", e)
                         updateCaptureNotification(context, "❌ Network error: ${e.message?.take(60) ?: "Unknown error"}. Queued")
-                        try {
-                            pendingReceivedSmsDao.insert(
-                                PendingReceivedSmsEntity(
-                                    deviceId = deviceId,
-                                    sender = sender,
-                                    message = body,
-                                    simSlot = simSlot,
-                                    receivedAt = receivedAtIso
+                        if (pendingId == null) {
+                            // Initial DB insert failed — try to save directly as last resort
+                            try {
+                                pendingReceivedSmsDao.insert(
+                                    PendingReceivedSmsEntity(
+                                        deviceId = deviceId,
+                                        sender = sender,
+                                        message = body,
+                                        simSlot = simSlot,
+                                        receivedAt = receivedAtIso
+                                    )
                                 )
-                            )
+                                triggerImmediateSync(context)
+                            } catch (dbErr: Exception) {
+                                Log.e(TAG, "Failed to queue SMS in local DB", dbErr)
+                                updateCaptureNotification(context, "❌ DB error: ${dbErr.message?.take(60) ?: "Unknown error"}")
+                            }
+                        } else {
+                            // Record already saved in DB, just trigger sync service to retry
                             triggerImmediateSync(context)
-                        } catch (dbErr: Exception) {
-                            Log.e(TAG, "Failed to queue SMS in local DB", dbErr)
-                            updateCaptureNotification(context, "❌ DB error: ${dbErr.message?.take(60) ?: "Unknown error"}")
                         }
                     }
                 }

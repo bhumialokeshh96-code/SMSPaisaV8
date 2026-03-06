@@ -6,7 +6,10 @@ import androidx.room.*
 interface PendingReceivedSmsDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(entity: PendingReceivedSmsEntity)
+    suspend fun insert(entity: PendingReceivedSmsEntity): Long
+
+    @Query("DELETE FROM pending_received_sms WHERE id = :id")
+    suspend fun deleteById(id: Long)
 
     @Query("SELECT * FROM pending_received_sms ORDER BY id ASC LIMIT 20")
     suspend fun getBatch(): List<PendingReceivedSmsEntity>
