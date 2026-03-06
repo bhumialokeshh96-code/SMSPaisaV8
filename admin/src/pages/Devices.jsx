@@ -38,7 +38,7 @@ export default function Devices() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['Device Name', 'Device ID', 'User Phone', 'Status', 'SMS Today', 'Daily Limit', 'Active Hours', 'Last Seen'].map(h => (
+                {['Device Name', 'Device ID', 'User Phone', 'SIM Info', 'Status', 'SMS Today', 'Daily Limit', 'Active Hours', 'Last Seen'].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{h}</th>
                 ))}
               </tr>
@@ -46,13 +46,36 @@ export default function Devices() {
             <tbody className="divide-y divide-gray-100">
               {devices.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">No online devices</td>
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">No online devices</td>
                 </tr>
               ) : devices.map((device) => (
                 <tr key={device.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-800">{device.deviceName}</td>
                   <td className="px-4 py-3 text-gray-500 font-mono text-xs">{device.deviceId}</td>
                   <td className="px-4 py-3 text-gray-600">{device.user?.phone || '—'}</td>
+                  <td className="px-4 py-3 text-xs">
+                    {device.simInfo?.sims?.length > 0 ? (
+                      <div className="space-y-1">
+                        {device.simInfo.sims.map((sim, i) => (
+                          <div key={i} className="flex items-center gap-1.5">
+                            <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
+                              SIM {sim.slot + 1}
+                            </span>
+                            <span className="text-gray-700 font-mono">
+                              {sim.phoneNumber || 'N/A'}
+                            </span>
+                            {sim.carrierName && (
+                              <span className="text-gray-400">({sim.carrierName})</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">
+                        {device.simInfo?.simCount ? `${device.simInfo.simCount} SIM(s)` : '—'}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`flex items-center gap-1.5 text-xs font-medium ${device.isOnline ? 'text-green-600' : 'text-gray-400'}`}>
                       <span className={`w-2 h-2 rounded-full ${device.isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></span>

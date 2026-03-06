@@ -3,6 +3,7 @@ package com.smspaisa.app.data.repository
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
+import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 import com.smspaisa.app.data.api.ApiService
 import com.smspaisa.app.data.api.HeartbeatRequest
@@ -46,11 +47,34 @@ class DeviceRepository @Inject constructor(
         }
     }
 
+    @SuppressLint("MissingPermission")
+    fun getSimDetails(): List<Map<String, Any?>> {
+        return try {
+            val subscriptionManager = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as? SubscriptionManager
+            val subscriptions = subscriptionManager?.activeSubscriptionInfoList ?: return emptyList()
+            subscriptions.map { sub ->
+                buildMap<String, Any?> {
+                    put("slot", sub.simSlotIndex)
+                    put("carrierName", sub.carrierName?.toString() ?: "N/A")
+                    put("countryIso", sub.countryIso ?: "")
+                    val number = sub.number
+                    put("phoneNumber", if (!number.isNullOrBlank()) number else "N/A")
+                }
+            }
+        } catch (e: SecurityException) {
+            emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     suspend fun registerDevice(fcmToken: String? = null): Result<Device> = withContext(Dispatchers.IO) {
         try {
             val simCount = getSimCount()
+            val simDetails = getSimDetails()
             val simInfo = buildMap<String, Any?> {
                 put("simCount", simCount)
+                put("sims", simDetails)
                 if (fcmToken != null) put("fcmToken", fcmToken)
             }
             val request = RegisterDeviceRequest(
