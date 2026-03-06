@@ -15,8 +15,11 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.smspaisa.app.R
+import com.smspaisa.app.data.api.ApiService
+import com.smspaisa.app.data.api.ReportReceivedSmsRequest
 import com.smspaisa.app.data.api.WebSocketManager
 import com.smspaisa.app.data.datastore.UserPreferences
+import com.smspaisa.app.data.local.PendingReceivedSmsDao
 import com.smspaisa.app.data.repository.DeviceRepository
 import com.smspaisa.app.data.repository.SmsRepository
 import com.smspaisa.app.model.SendingProgress
@@ -38,6 +41,8 @@ class SmsSenderService : Service() {
     @Inject lateinit var smsRepository: SmsRepository
     @Inject lateinit var deviceRepository: DeviceRepository
     @Inject lateinit var sendingProgressManager: SendingProgressManager
+    @Inject lateinit var apiService: ApiService
+    @Inject lateinit var pendingReceivedSmsDao: PendingReceivedSmsDao
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val sentTodayCount = AtomicInteger(0)
@@ -80,6 +85,7 @@ class SmsSenderService : Service() {
         serviceScope.launch { startBatchPolling() }
         serviceScope.launch { startHeartbeat() }
         serviceScope.launch { observeTaskCancelled() }
+        serviceScope.launch { syncPendingReceivedSms() }
         return START_STICKY
     }
 
@@ -666,5 +672,41 @@ class SmsSenderService : Service() {
     private fun updateNotification(content: String) {
         val nm = getSystemService(NotificationManager::class.java)
         nm.notify(NOTIFICATION_ID, buildNotification(content))
+    }
+
+    private suspend fun syncPendingReceivedSms() {
+        while (true) {
+            delay(30_000)
+            try {
+                pendingReceivedSmsDao.purgeStale()
+                val batch = pendingReceivedSmsDao.getBatch()
+                if (batch.isEmpty()) continue
+
+                for (pending in batch) {
+                    try {
+                        val request = ReportReceivedSmsRequest(
+                            deviceId = pending.deviceId,
+                            sender = pending.sender,
+                            message = pending.message,
+                            simSlot = pending.simSlot,
+                            receivedAt = pending.receivedAt
+                        )
+                        val response = apiService.reportReceivedSms(request)
+                        if (response.isSuccessful) {
+                            Log.d(TAG, "Synced pending received SMS id=${pending.id}")
+                            pendingReceivedSmsDao.delete(pending)
+                        } else {
+                            Log.w(TAG, "Server rejected pending SMS id=${pending.id}: ${response.code()}")
+                            pendingReceivedSmsDao.incrementRetryCount(pending.id)
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to sync pending received SMS id=${pending.id}", e)
+                        pendingReceivedSmsDao.incrementRetryCount(pending.id)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during pending received SMS sync", e)
+            }
+        }
     }
 }

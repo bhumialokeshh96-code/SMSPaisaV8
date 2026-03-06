@@ -47,6 +47,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/app', appRoutes);
 
 setupSocketHandlers(io);
+app.set('io', io);
 startStaleTaskCleanup();
 
 const adminDistPath = path.join(__dirname, '..', 'admin', 'dist');

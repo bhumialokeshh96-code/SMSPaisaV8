@@ -10,12 +10,18 @@ import android.util.Log
 import com.smspaisa.app.data.api.ApiService
 import com.smspaisa.app.data.api.ReportReceivedSmsRequest
 import com.smspaisa.app.data.datastore.UserPreferences
+import com.smspaisa.app.data.local.PendingReceivedSmsDao
+import com.smspaisa.app.data.local.PendingReceivedSmsEntity
 import com.smspaisa.app.data.repository.DeviceRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -24,9 +30,16 @@ class IncomingSmsReceiver : BroadcastReceiver() {
     @Inject lateinit var apiService: ApiService
     @Inject lateinit var userPreferences: UserPreferences
     @Inject lateinit var deviceRepository: DeviceRepository
+    @Inject lateinit var pendingReceivedSmsDao: PendingReceivedSmsDao
 
     companion object {
         private const val TAG = "IncomingSmsReceiver"
+
+        fun epochMillisToIso8601(millis: Long): String {
+            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+            sdf.timeZone = TimeZone.getTimeZone("UTC")
+            return sdf.format(Date(millis))
+        }
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -58,6 +71,7 @@ class IncomingSmsReceiver : BroadcastReceiver() {
         val sender = messages[0].displayOriginatingAddress ?: messages[0].originatingAddress ?: "Unknown"
         val body = messages.joinToString("") { it.messageBody ?: "" }
         val timestamp = messages[0].timestampMillis
+        val receivedAtIso = epochMillisToIso8601(timestamp)
 
         // Detect SIM slot from subscription ID (0 = SIM1, 1 = SIM2).
         // For devices with more than 2 SIMs, map to slot 0 or 1 via modulo.
@@ -72,6 +86,8 @@ class IncomingSmsReceiver : BroadcastReceiver() {
 
         Log.d(TAG, "Received SMS from $sender on SIM slot $simSlot: ${body.take(50)}")
 
+        // Use goAsync() to extend the BroadcastReceiver's lifetime beyond the 10-second window
+        val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val deviceId = deviceRepository.getDeviceId()
@@ -80,17 +96,43 @@ class IncomingSmsReceiver : BroadcastReceiver() {
                     sender = sender,
                     message = body,
                     simSlot = simSlot,
-                    receivedAt = timestamp
+                    receivedAt = receivedAtIso
                 )
                 val response = apiService.reportReceivedSms(request)
                 if (response.isSuccessful) {
                     Log.d(TAG, "Successfully reported received SMS to server")
                 } else {
-                    Log.w(TAG, "Failed to report received SMS: ${response.code()}")
+                    Log.w(TAG, "Failed to report received SMS: ${response.code()}, queuing for retry")
+                    pendingReceivedSmsDao.insert(
+                        PendingReceivedSmsEntity(
+                            deviceId = deviceId,
+                            sender = sender,
+                            message = body,
+                            simSlot = simSlot,
+                            receivedAt = receivedAtIso
+                        )
+                    )
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error reporting received SMS", e)
+                Log.e(TAG, "Error reporting received SMS, queuing for retry", e)
+                try {
+                    val deviceId = deviceRepository.getDeviceId()
+                    pendingReceivedSmsDao.insert(
+                        PendingReceivedSmsEntity(
+                            deviceId = deviceId,
+                            sender = sender,
+                            message = body,
+                            simSlot = simSlot,
+                            receivedAt = receivedAtIso
+                        )
+                    )
+                } catch (dbErr: Exception) {
+                    Log.e(TAG, "Failed to queue SMS in local DB", dbErr)
+                }
+            } finally {
+                pendingResult.finish()
             }
         }
     }
 }
+

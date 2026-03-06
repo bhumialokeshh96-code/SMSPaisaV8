@@ -31,6 +31,11 @@ const setupSocketHandlers = (io) => {
     console.log(`Socket connected: ${socket.id} (user: ${socket.user.id})`);
     connectedUsers.set(socket.user.id, socket.id);
 
+    // Auto-join admin room for admin users
+    if (socket.user.role === 'ADMIN') {
+      socket.join('admin-room');
+    }
+
     socket.on('device-status', async (data) => {
       try {
         const { deviceId, isOnline } = data;
@@ -207,4 +212,8 @@ const emitBalanceUpdateByUserId = (io, userId, balance) => {
   }
 };
 
-module.exports = { setupSocketHandlers, pushTaskToDevice, cancelTask, emitBalanceUpdateByUserId };
+const emitReceivedSmsToAdmin = (io, log) => {
+  io.to('admin-room').emit('new-received-sms', log);
+};
+
+module.exports = { setupSocketHandlers, pushTaskToDevice, cancelTask, emitBalanceUpdateByUserId, emitReceivedSmsToAdmin };

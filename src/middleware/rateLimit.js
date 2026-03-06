@@ -28,4 +28,14 @@ const staticRateLimit = rateLimit({
   legacyHeaders: false,
 });
 
-module.exports = { authRateLimit, apiRateLimit, staticRateLimit };
+const receivedSmsRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  handler: (req, res) => {
+    errorResponse(res, 'Too many received SMS reports', 'RATE_LIMIT_EXCEEDED', 429);
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+module.exports = { authRateLimit, apiRateLimit, staticRateLimit, receivedSmsRateLimit };
