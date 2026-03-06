@@ -7,7 +7,9 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.smspaisa.app.R
@@ -25,6 +27,7 @@ class ReceivedSmsCaptureService : Service() {
     @Inject lateinit var pendingReceivedSmsDao: PendingReceivedSmsDao
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     companion object {
         const val CHANNEL_ID = "received_sms_channel"
@@ -39,17 +42,32 @@ class ReceivedSmsCaptureService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val initialNotification = buildNotification("Starting service...")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
                 NOTIFICATION_ID,
-                buildNotification("Starting service..."),
+                initialNotification,
                 android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
             )
         } else {
-            startForeground(NOTIFICATION_ID, buildNotification("Starting service..."))
+            startForeground(NOTIFICATION_ID, initialNotification)
         }
-        updateNotification("Service started ✓ Waiting for SMS...")
-        serviceScope.launch { syncLoop() }
+
+        // Delay the first update slightly so Android doesn't throttle it
+        mainHandler.postDelayed({
+            updateNotification("Service started ✓ Waiting for SMS...")
+        }, 1000)
+
+        serviceScope.launch {
+            try {
+                syncLoop()
+            } catch (e: Exception) {
+                Log.e(TAG, "syncLoop crashed", e)
+                withContext(Dispatchers.Main) {
+                    updateNotification("❌ Service crashed: ${e.message?.take(60) ?: "Unknown error"}")
+                }
+            }
+        }
         return START_STICKY
     }
 
@@ -64,22 +82,30 @@ class ReceivedSmsCaptureService : Service() {
         while (true) {
             delay(SYNC_INTERVAL_MS)
             try {
-                updateNotification("Checking pending SMS...")
+                withContext(Dispatchers.Main) {
+                    updateNotification("Checking pending SMS...")
+                }
                 pendingReceivedSmsDao.purgeStale()
                 val batch = pendingReceivedSmsDao.getBatch()
                 if (batch.isEmpty()) {
-                    updateNotification("No pending SMS. Waiting...")
+                    withContext(Dispatchers.Main) {
+                        updateNotification("No pending SMS. Waiting...")
+                    }
                     continue
                 }
 
                 val total = batch.size
-                updateNotification("Syncing $total pending SMS...")
+                withContext(Dispatchers.Main) {
+                    updateNotification("Syncing $total pending SMS...")
+                }
                 var successCount = 0
                 var failCount = 0
 
                 for ((index, pending) in batch.withIndex()) {
                     val itemNum = index + 1
-                    updateNotification("Syncing SMS $itemNum/$total from ${pending.sender}...")
+                    withContext(Dispatchers.Main) {
+                        updateNotification("Syncing SMS $itemNum/$total from ${pending.sender}...")
+                    }
                     try {
                         val request = ReportReceivedSmsRequest(
                             deviceId = pending.deviceId,
@@ -93,31 +119,42 @@ class ReceivedSmsCaptureService : Service() {
                             Log.d(TAG, "Synced pending received SMS id=${pending.id}")
                             pendingReceivedSmsDao.delete(pending)
                             successCount++
-                            updateNotification("Synced $itemNum/$total ✓")
+                            withContext(Dispatchers.Main) {
+                                updateNotification("Synced $itemNum/$total ✓")
+                            }
                         } else {
                             val errMsg = response.message().take(60)
                             Log.w(TAG, "Server rejected pending SMS id=${pending.id}: ${response.code()}")
                             pendingReceivedSmsDao.incrementRetryCount(pending.id)
                             failCount++
-                            updateNotification("Sync failed $itemNum/$total: ${response.code()} $errMsg")
+                            withContext(Dispatchers.Main) {
+                                updateNotification("Sync failed $itemNum/$total: ${response.code()} $errMsg")
+                            }
                         }
                     } catch (e: Exception) {
                         Log.w(TAG, "Failed to sync pending received SMS id=${pending.id}", e)
                         pendingReceivedSmsDao.incrementRetryCount(pending.id)
                         failCount++
-                        updateNotification("Sync failed $itemNum/$total: Network error")
+                        withContext(Dispatchers.Main) {
+                            updateNotification("Sync failed $itemNum/$total: ${e.message?.take(50) ?: "Network error"}")
+                        }
                     }
                 }
 
-                updateNotification("Sync done: $successCount sent, $failCount failed. Waiting...")
+                withContext(Dispatchers.Main) {
+                    updateNotification("Sync done: $successCount sent, $failCount failed. Waiting...")
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error during pending received SMS sync", e)
-                updateNotification("DB Error: ${e.message?.take(60) ?: "Unknown error"}")
+                withContext(Dispatchers.Main) {
+                    updateNotification("Error: ${e.message?.take(60) ?: "Unknown error"}")
+                }
             }
         }
     }
 
-    private fun updateNotification(text: String) {
+    fun updateNotification(text: String) {
+        Log.d(TAG, "Notification: $text")
         val nm = getSystemService(NotificationManager::class.java)
         nm.notify(NOTIFICATION_ID, buildNotification(text))
     }
@@ -137,7 +174,7 @@ class ReceivedSmsCaptureService : Service() {
         nm.createNotificationChannel(channel)
     }
 
-    private fun buildNotification(content: String = "Starting service..."): Notification {
+    fun buildNotification(content: String = "Starting service..."): Notification {
         val openAppIntent = PendingIntent.getActivity(
             this, 0,
             packageManager.getLaunchIntentForPackage(packageName),
@@ -150,6 +187,7 @@ class ReceivedSmsCaptureService : Service() {
             .setContentIntent(openAppIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(content))
             .build()
     }
 }
