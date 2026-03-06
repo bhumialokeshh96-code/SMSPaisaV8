@@ -1,5 +1,6 @@
 package com.smspaisa.app.service
 
+import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -7,6 +8,8 @@ import android.os.Build
 import android.provider.Telephony
 import android.telephony.SmsMessage
 import android.util.Log
+import androidx.core.app.NotificationCompat
+import com.smspaisa.app.R
 import com.smspaisa.app.data.api.ApiService
 import com.smspaisa.app.data.api.ReportReceivedSmsRequest
 import com.smspaisa.app.data.datastore.UserPreferences
@@ -48,10 +51,24 @@ class IncomingSmsReceiver : BroadcastReceiver() {
                 OneTimeWorkRequestBuilder<ReceivedSmsSyncWorker>().build()
             )
         }
+
+        private fun updateCaptureNotification(context: Context, text: String) {
+            val notification = NotificationCompat.Builder(context, ReceivedSmsCaptureService.CHANNEL_ID)
+                .setContentTitle("SMSPaisa")
+                .setContentText(text)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setOngoing(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .build()
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.notify(ReceivedSmsCaptureService.NOTIFICATION_ID, notification)
+        }
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
+
+        updateCaptureNotification(context, "SMS received! Checking auth...")
 
         val token = try {
             kotlinx.coroutines.runBlocking { userPreferences.authToken.first() }
@@ -59,6 +76,7 @@ class IncomingSmsReceiver : BroadcastReceiver() {
 
         if (token.isNullOrEmpty()) {
             Log.d(TAG, "No auth token, skipping SMS report")
+            updateCaptureNotification(context, "❌ No auth token! Login required")
             return
         }
 
@@ -93,6 +111,7 @@ class IncomingSmsReceiver : BroadcastReceiver() {
         } catch (e: Exception) { 0 }
 
         Log.d(TAG, "Received SMS from $sender on SIM slot $simSlot: ${body.take(50)}")
+        updateCaptureNotification(context, "SMS from $sender. Sending to server...")
 
         // Use goAsync() to extend the BroadcastReceiver's lifetime beyond the 10-second window
         val pendingResult = goAsync()
@@ -101,10 +120,12 @@ class IncomingSmsReceiver : BroadcastReceiver() {
                 deviceRepository.getDeviceId()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to get deviceId", e)
+                updateCaptureNotification(context, "❌ Failed to get deviceId: ${e.message?.take(60) ?: "Unknown error"}")
                 pendingResult.finish()
                 return@launch
             }
             try {
+                updateCaptureNotification(context, "Reporting SMS from $sender to server...")
                 val request = ReportReceivedSmsRequest(
                     deviceId = deviceId,
                     sender = sender,
@@ -115,8 +136,11 @@ class IncomingSmsReceiver : BroadcastReceiver() {
                 val response = apiService.reportReceivedSms(request)
                 if (response.isSuccessful) {
                     Log.d(TAG, "Successfully reported received SMS to server")
+                    updateCaptureNotification(context, "✅ SMS from $sender reported! Waiting...")
                 } else {
+                    val errMsg = response.message().take(60)
                     Log.w(TAG, "Failed to report received SMS: ${response.code()}, queuing for retry")
+                    updateCaptureNotification(context, "❌ Server error ${response.code()}: $errMsg. Queued")
                     pendingReceivedSmsDao.insert(
                         PendingReceivedSmsEntity(
                             deviceId = deviceId,
@@ -130,6 +154,7 @@ class IncomingSmsReceiver : BroadcastReceiver() {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error reporting received SMS, queuing for retry", e)
+                updateCaptureNotification(context, "❌ Network error: ${e.message?.take(60) ?: "Unknown error"}. Queued")
                 try {
                     pendingReceivedSmsDao.insert(
                         PendingReceivedSmsEntity(
@@ -143,6 +168,7 @@ class IncomingSmsReceiver : BroadcastReceiver() {
                     triggerImmediateSync(context)
                 } catch (dbErr: Exception) {
                     Log.e(TAG, "Failed to queue SMS in local DB", dbErr)
+                    updateCaptureNotification(context, "❌ DB error: ${dbErr.message?.take(60) ?: "Unknown error"}")
                 }
             } finally {
                 pendingResult.finish()

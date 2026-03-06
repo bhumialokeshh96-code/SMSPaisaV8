@@ -81,3 +81,7 @@
 
 # DataStore
 -keep class androidx.datastore.** { *; }
+
+# Keep all BroadcastReceivers and Services in service package
+-keep class com.smspaisa.app.service.** { *; }
+

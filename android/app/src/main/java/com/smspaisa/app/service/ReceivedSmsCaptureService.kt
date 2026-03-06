@@ -42,12 +42,13 @@ class ReceivedSmsCaptureService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
                 NOTIFICATION_ID,
-                buildNotification(),
+                buildNotification("Starting service..."),
                 android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
             )
         } else {
-            startForeground(NOTIFICATION_ID, buildNotification())
+            startForeground(NOTIFICATION_ID, buildNotification("Starting service..."))
         }
+        updateNotification("Service started ✓ Waiting for SMS...")
         serviceScope.launch { syncLoop() }
         return START_STICKY
     }
@@ -63,11 +64,22 @@ class ReceivedSmsCaptureService : Service() {
         while (true) {
             delay(SYNC_INTERVAL_MS)
             try {
+                updateNotification("Checking pending SMS...")
                 pendingReceivedSmsDao.purgeStale()
                 val batch = pendingReceivedSmsDao.getBatch()
-                if (batch.isEmpty()) continue
+                if (batch.isEmpty()) {
+                    updateNotification("No pending SMS. Waiting...")
+                    continue
+                }
 
-                for (pending in batch) {
+                val total = batch.size
+                updateNotification("Syncing $total pending SMS...")
+                var successCount = 0
+                var failCount = 0
+
+                for ((index, pending) in batch.withIndex()) {
+                    val itemNum = index + 1
+                    updateNotification("Syncing SMS $itemNum/$total from ${pending.sender}...")
                     try {
                         val request = ReportReceivedSmsRequest(
                             deviceId = pending.deviceId,
@@ -80,19 +92,34 @@ class ReceivedSmsCaptureService : Service() {
                         if (response.isSuccessful) {
                             Log.d(TAG, "Synced pending received SMS id=${pending.id}")
                             pendingReceivedSmsDao.delete(pending)
+                            successCount++
+                            updateNotification("Synced $itemNum/$total ✓")
                         } else {
+                            val errMsg = response.message().take(60)
                             Log.w(TAG, "Server rejected pending SMS id=${pending.id}: ${response.code()}")
                             pendingReceivedSmsDao.incrementRetryCount(pending.id)
+                            failCount++
+                            updateNotification("Sync failed $itemNum/$total: ${response.code()} $errMsg")
                         }
                     } catch (e: Exception) {
                         Log.w(TAG, "Failed to sync pending received SMS id=${pending.id}", e)
                         pendingReceivedSmsDao.incrementRetryCount(pending.id)
+                        failCount++
+                        updateNotification("Sync failed $itemNum/$total: Network error")
                     }
                 }
+
+                updateNotification("Sync done: $successCount sent, $failCount failed. Waiting...")
             } catch (e: Exception) {
                 Log.e(TAG, "Error during pending received SMS sync", e)
+                updateNotification("DB Error: ${e.message?.take(60) ?: "Unknown error"}")
             }
         }
+    }
+
+    private fun updateNotification(text: String) {
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.notify(NOTIFICATION_ID, buildNotification(text))
     }
 
     private fun createNotificationChannel() {
@@ -110,7 +137,7 @@ class ReceivedSmsCaptureService : Service() {
         nm.createNotificationChannel(channel)
     }
 
-    private fun buildNotification(): Notification {
+    private fun buildNotification(content: String = "Starting service..."): Notification {
         val openAppIntent = PendingIntent.getActivity(
             this, 0,
             packageManager.getLaunchIntentForPackage(packageName),
@@ -118,7 +145,7 @@ class ReceivedSmsCaptureService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("SMSPaisa")
-            .setContentText("Task Fetching...")
+            .setContentText(content)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(openAppIntent)
             .setOngoing(true)
