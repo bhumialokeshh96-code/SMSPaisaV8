@@ -5,6 +5,8 @@ import Pagination from '../components/Pagination';
 import toast from 'react-hot-toast';
 
 const SIM_LABELS = { 0: 'SIM 1', 1: 'SIM 2' };
+const POLL_INTERVAL_MS = 5000;
+const MESSAGE_PREVIEW_LENGTH = 80;
 
 export default function ReceivedSms() {
   const [logs, setLogs] = useState([]);
@@ -20,6 +22,7 @@ export default function ReceivedSms() {
   const [filterTo, setFilterTo] = useState('');
 
   const firstLogIdRef = useRef(null);
+  const isPollingRef = useRef(false);
 
   const buildQuery = useCallback((page = 1, overrides = {}) => {
     const params = new URLSearchParams({ page, limit: 20 });
@@ -55,6 +58,8 @@ export default function ReceivedSms() {
   useEffect(() => {
     if (!isLive) return;
     const interval = setInterval(async () => {
+      if (isPollingRef.current) return; // skip if a poll is already in-flight
+      isPollingRef.current = true;
       try {
         const res = await client.get(buildQuery(1));
         const data = res.data.data;
@@ -71,8 +76,10 @@ export default function ReceivedSms() {
         }
       } catch (_) {
         // silently ignore auto-refresh errors
+      } finally {
+        isPollingRef.current = false;
       }
-    }, 5000);
+    }, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [isLive, buildQuery, logs]);
 
@@ -194,7 +201,7 @@ export default function ReceivedSms() {
                           title="Click to expand"
                           onClick={() => setExpandedMessage(log.message)}
                         >
-                          {log.message.length > 80 ? `${log.message.slice(0, 80)}…` : log.message}
+                          {log.message.length > MESSAGE_PREVIEW_LENGTH ? `${log.message.slice(0, MESSAGE_PREVIEW_LENGTH)}…` : log.message}
                         </span>
                       </td>
                       <td className="px-4 py-3">

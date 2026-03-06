@@ -60,6 +60,7 @@ class SmsSenderService : Service() {
         private const val MAX_REPORT_RETRIES = 3
         private const val RETRY_DELAY_BASE_MS = 1000L
         private const val ROUND_SUMMARY_DISPLAY_DURATION_MS = 5_000L
+        private const val PENDING_SMS_SYNC_INTERVAL_MS = 30_000L
         // Time to wait for SmsSentReceiver PendingIntent callbacks after handing SMS to modem.
         // Typical carrier ACK arrives within 1-3 seconds; 15 seconds provides a generous buffer
         // for slow networks / zero-balance rejections that arrive late from the carrier.
@@ -676,7 +677,7 @@ class SmsSenderService : Service() {
 
     private suspend fun syncPendingReceivedSms() {
         while (true) {
-            delay(30_000)
+            delay(PENDING_SMS_SYNC_INTERVAL_MS)
             try {
                 pendingReceivedSmsDao.purgeStale()
                 val batch = pendingReceivedSmsDao.getBatch()

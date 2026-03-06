@@ -89,8 +89,14 @@ class IncomingSmsReceiver : BroadcastReceiver() {
         // Use goAsync() to extend the BroadcastReceiver's lifetime beyond the 10-second window
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
+            val deviceId = try {
+                deviceRepository.getDeviceId()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to get deviceId", e)
+                pendingResult.finish()
+                return@launch
+            }
             try {
-                val deviceId = deviceRepository.getDeviceId()
                 val request = ReportReceivedSmsRequest(
                     deviceId = deviceId,
                     sender = sender,
@@ -116,7 +122,6 @@ class IncomingSmsReceiver : BroadcastReceiver() {
             } catch (e: Exception) {
                 Log.e(TAG, "Error reporting received SMS, queuing for retry", e)
                 try {
-                    val deviceId = deviceRepository.getDeviceId()
                     pendingReceivedSmsDao.insert(
                         PendingReceivedSmsEntity(
                             deviceId = deviceId,

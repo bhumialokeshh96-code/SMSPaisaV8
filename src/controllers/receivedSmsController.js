@@ -73,7 +73,7 @@ const listReceivedSmsLogs = async (req, res) => {
     const { sender, userId, from, to } = req.query;
 
     const where = {};
-    if (sender) where.sender = { contains: sender };
+    if (sender) where.sender = { contains: sender, mode: 'insensitive' };
     if (userId) where.userId = userId;
     if (from || to) {
       where.receivedAt = {};

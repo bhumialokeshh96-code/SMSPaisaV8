@@ -70,7 +70,8 @@ object AppModule {
             context,
             AppDatabase::class.java,
             "smspaisa_database"
-        ).fallbackToDestructiveMigration()
+        ).addMigrations(AppDatabase.MIGRATION_1_2)
+            .fallbackToDestructiveMigration()
             .build()
     }
 
