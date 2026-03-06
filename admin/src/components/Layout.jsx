@@ -8,6 +8,7 @@ const pageTitles = {
   '/users': 'Users',
   '/sms': 'SMS Tasks',
   '/sms/logs': 'SMS Logs',
+  '/sms/received': 'Received SMS',
   '/withdrawals': 'Withdrawals',
   '/devices': 'Devices',
   '/transactions': 'Transactions',

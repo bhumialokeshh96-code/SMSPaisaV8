@@ -10,6 +10,7 @@ const {
   listReferrals, forcePayReferralBonus,
 } = require('../controllers/adminController');
 const { updateAppVersion } = require('../controllers/appController');
+const { listReceivedSmsLogs } = require('../controllers/receivedSmsController');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { validate, schemas } = require('../middleware/validation');
 
@@ -27,6 +28,7 @@ router.post('/sms/bulk-create', validate(schemas.bulkCreateTask), bulkCreateSmsT
 router.post('/sms/assign-task', validate(schemas.assignTask), assignTaskToUser);
 router.get('/sms/tasks', listSmsTasks);
 router.get('/sms/logs', listSmsLogs);
+router.get('/sms/received', listReceivedSmsLogs);
 router.get('/withdrawals', listWithdrawals);
 router.put('/withdrawals/:id/approve', approveWithdrawal);
 router.put('/withdrawals/:id/reject', rejectWithdrawal);
