@@ -72,6 +72,72 @@ const setupSocketHandlers = (io) => {
       }
     });
 
+    socket.on('received-sms', async (data) => {
+      try {
+        const { deviceId, sender, message, simSlot, receivedAt } = data;
+
+        // Validate required fields
+        if (!deviceId || !sender || !message) return;
+
+        // Find the device
+        const device = await prisma.device.findFirst({
+          where: { deviceId, userId: socket.user.id },
+        });
+        if (!device) return;
+
+        const parsedAt = receivedAt ? new Date(receivedAt) : new Date();
+
+        // Clock skew check — reject timestamps more than 1 minute in the future
+        const now = new Date();
+        const CLOCK_SKEW_TOLERANCE_MS = 60_000;
+        if (parsedAt > new Date(now.getTime() + CLOCK_SKEW_TOLERANCE_MS)) return;
+
+        // Deduplication
+        const existing = await prisma.receivedSmsLog.findFirst({
+          where: { userId: socket.user.id, sender, receivedAt: parsedAt },
+        });
+        if (existing) {
+          socket.emit('received-sms-ack', { id: existing.id, status: 'duplicate' });
+          return;
+        }
+
+        // Create log
+        const log = await prisma.receivedSmsLog.create({
+          data: {
+            userId: socket.user.id,
+            deviceId: device.id,
+            sender,
+            message,
+            simSlot: simSlot ?? 0,
+            receivedAt: parsedAt,
+          },
+        });
+
+        // Fetch full log with relations for admin push
+        const fullLog = await prisma.receivedSmsLog.findUnique({
+          where: { id: log.id },
+          include: {
+            user: { select: { id: true, phone: true, name: true } },
+            device: { select: { deviceId: true, deviceName: true } },
+          },
+        });
+
+        // ACK back to the phone so it knows to delete from local DB
+        socket.emit('received-sms-ack', { id: log.id, status: 'saved' });
+
+        // Push to admin panel instantly
+        if (fullLog) {
+          emitReceivedSmsToAdmin(io, fullLog);
+        }
+      } catch (err) {
+        if (err.code === 'P2002') {
+          socket.emit('received-sms-ack', { status: 'duplicate' });
+          return;
+        }
+        console.error('received-sms error:', err);
+      }
+    });
+
     socket.on('task-result', async (data) => {
       try {
         const { taskId, status, deviceId } = data;

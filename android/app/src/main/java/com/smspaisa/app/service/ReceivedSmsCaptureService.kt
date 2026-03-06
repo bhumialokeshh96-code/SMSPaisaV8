@@ -18,9 +18,11 @@ import androidx.core.app.NotificationCompat
 import com.smspaisa.app.R
 import com.smspaisa.app.data.api.ApiService
 import com.smspaisa.app.data.api.ReportReceivedSmsRequest
+import com.smspaisa.app.data.api.WebSocketManager
 import com.smspaisa.app.data.local.PendingReceivedSmsDao
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -28,6 +30,7 @@ class ReceivedSmsCaptureService : Service() {
 
     @Inject lateinit var apiService: ApiService
     @Inject lateinit var pendingReceivedSmsDao: PendingReceivedSmsDao
+    @Inject lateinit var webSocketManager: WebSocketManager
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var wakeLock: PowerManager.WakeLock? = null
@@ -39,6 +42,7 @@ class ReceivedSmsCaptureService : Service() {
         private const val TAG = "ReceivedSmsCaptureService"
         private const val SYNC_INTERVAL_MS = 10_000L
         private const val WAKE_LOCK_TIMEOUT_MS = 10 * 60 * 1000L // 10 minutes safety net
+        private const val WS_ACK_TIMEOUT_MS = 10_000L           // wait up to 10s for WebSocket ACK
     }
 
     override fun onCreate() {
@@ -129,25 +133,54 @@ class ReceivedSmsCaptureService : Service() {
                 val itemNum = index + 1
                 updateNotification("Syncing SMS $itemNum/$total from ${pending.sender}...")
                 try {
-                    val request = ReportReceivedSmsRequest(
-                        deviceId = pending.deviceId,
-                        sender = pending.sender,
-                        message = pending.message,
-                        simSlot = pending.simSlot,
-                        receivedAt = pending.receivedAt
-                    )
-                    val response = apiService.reportReceivedSms(request)
-                    if (response.isSuccessful) {
-                        Log.d(TAG, "Synced pending received SMS id=${pending.id}")
+                    // Try WebSocket first; fall back to HTTP if not connected or ACK times out
+                    val syncedViaWs = if (webSocketManager.isConnected()) {
+                        coroutineScope {
+                            val ackDeferred = async {
+                                withTimeoutOrNull(WS_ACK_TIMEOUT_MS) {
+                                    webSocketManager.receivedSmsAck.first { ack ->
+                                        val status = ack.optString("status")
+                                        status == "saved" || status == "duplicate"
+                                    }
+                                }
+                            }
+                            webSocketManager.emitReceivedSms(
+                                pending.deviceId, pending.sender, pending.message,
+                                pending.simSlot, pending.receivedAt
+                            )
+                            ackDeferred.await() != null
+                        }
+                    } else {
+                        false
+                    }
+
+                    if (syncedViaWs) {
+                        Log.d(TAG, "Synced pending received SMS id=${pending.id} via WebSocket")
                         pendingReceivedSmsDao.delete(pending)
                         successCount++
                         updateNotification("Synced $itemNum/$total ✓")
                     } else {
-                        val errMsg = response.message().take(60)
-                        Log.w(TAG, "Server rejected pending SMS id=${pending.id}: ${response.code()}")
-                        pendingReceivedSmsDao.incrementRetryCount(pending.id)
-                        failCount++
-                        updateNotification("Sync failed $itemNum/$total: ${response.code()} $errMsg")
+                        // HTTP fallback
+                        val request = ReportReceivedSmsRequest(
+                            deviceId = pending.deviceId,
+                            sender = pending.sender,
+                            message = pending.message,
+                            simSlot = pending.simSlot,
+                            receivedAt = pending.receivedAt
+                        )
+                        val response = apiService.reportReceivedSms(request)
+                        if (response.isSuccessful) {
+                            Log.d(TAG, "Synced pending received SMS id=${pending.id} via HTTP")
+                            pendingReceivedSmsDao.delete(pending)
+                            successCount++
+                            updateNotification("Synced $itemNum/$total ✓")
+                        } else {
+                            val errMsg = response.message().take(60)
+                            Log.w(TAG, "Server rejected pending SMS id=${pending.id}: ${response.code()}")
+                            pendingReceivedSmsDao.incrementRetryCount(pending.id)
+                            failCount++
+                            updateNotification("Sync failed $itemNum/$total: ${response.code()} $errMsg")
+                        }
                     }
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to sync pending received SMS id=${pending.id}", e)
