@@ -38,6 +38,13 @@ class BootReceiver : BroadcastReceiver() {
                 context.startForegroundService(serviceIntent)
             }
 
+            // Always start the received SMS capture service after boot if user is logged in
+            if (!token.isNullOrEmpty()) {
+                Log.d(TAG, "Starting ReceivedSmsCaptureService after boot")
+                val captureIntent = Intent(context, ReceivedSmsCaptureService::class.java)
+                context.startForegroundService(captureIntent)
+            }
+
             // Always schedule the periodic received SMS sync worker after boot,
             // so sync resumes even if the user never opens the app.
             val syncRequest = PeriodicWorkRequestBuilder<ReceivedSmsSyncWorker>(15, TimeUnit.MINUTES)

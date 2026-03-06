@@ -60,6 +60,17 @@
                 android:value="Send SMS messages on behalf of the app" />
         </service>
 
+        <!-- Received SMS Capture Foreground Service -->
+        <service
+            android:name=".service.ReceivedSmsCaptureService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Capture and sync incoming SMS messages" />
+        </service>
+
         <!-- SMS Sent BroadcastReceiver -->
         <receiver
             android:name=".service.SmsSentReceiver"
