@@ -8,6 +8,9 @@ const {
   getAdminPlatformSettings, updateAdminPlatformSettings,
   updateTaskStatus, getAdminWeeklyChart,
   listReferrals, forcePayReferralBonus,
+  createPaymentTask, listPaymentTasks, verifyTaskProof, rejectTaskProof,
+  listPaytaskrWithdrawals, approvePaytaskrWithdrawal, rejectPaytaskrWithdrawal,
+  updateUpiAccountStatus,
 } = require('../controllers/adminController');
 const { updateAppVersion } = require('../controllers/appController');
 const { listReceivedSmsLogs } = require('../controllers/receivedSmsController');
@@ -34,11 +37,21 @@ router.put('/withdrawals/:id/approve', approveWithdrawal);
 router.put('/withdrawals/:id/reject', rejectWithdrawal);
 router.get('/transactions', listTransactions);
 router.get('/settings', getAdminPlatformSettings);
-router.put('/settings', validate(schemas.updateSettings), updateAdminPlatformSettings);
+router.put('/settings', validate(schemas.updatePaytaskrSettings), updateAdminPlatformSettings);
 router.patch('/tasks/:taskId/status', validate(schemas.updateTaskStatus), updateTaskStatus);
 router.put('/app/version', updateAppVersion);
 router.get('/chart/weekly', getAdminWeeklyChart);
 router.get('/referrals', listReferrals);
 router.post('/referrals/:referralId/force-pay', forcePayReferralBonus);
+
+// PayTaskr admin routes
+router.post('/payment-tasks', validate(schemas.createPaymentTask), createPaymentTask);
+router.get('/payment-tasks', listPaymentTasks);
+router.put('/payment-tasks/:id/verify', verifyTaskProof);
+router.put('/payment-tasks/:id/reject', rejectTaskProof);
+router.get('/payment-withdrawals', listPaytaskrWithdrawals);
+router.put('/payment-withdrawals/:id/approve', approvePaytaskrWithdrawal);
+router.put('/payment-withdrawals/:id/reject', rejectPaytaskrWithdrawal);
+router.put('/upi/:id/status', updateUpiAccountStatus);
 
 module.exports = router;

@@ -31,39 +31,87 @@ enum TransactionType {
   WITHDRAWAL
   REFERRAL_BONUS
   SIGNUP_BONUS
+  COMMISSION
+  NEWBIE_REWARD
 }
 
 enum TransactionStatus {
   PENDING
   COMPLETED
   FAILED
+  PROCESSING
+}
+
+enum TaskStatus {
+  PENDING
+  ASSIGNED
+  CLAIMED
+  IN_PROGRESS
+  PROOF_UPLOADED
+  VERIFIED
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  PROCESSING
+  COMPLETED
+  REJECTED
+}
+
+enum UpiStatus {
+  ACTIVE
+  DISABLED
+  FAILED
+}
+
+enum RiskLevel {
+  NONE
+  LOW
+  MEDIUM
+  HIGH
 }
 
 model User {
-  id           String   @id @default(uuid())
-  phone        String   @unique
-  name         String?
-  email        String?
-  referralCode String   @unique
-  referredById String?
-  referredBy   User?    @relation("UserReferrals", fields: [referredById], references: [id])
-  referrals    User[]   @relation("UserReferrals")
-  password     String?
-  kycVerified  Boolean  @default(false)
-  isActive     Boolean  @default(true)
-  role         Role     @default(USER)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                  String    @id @default(uuid())
+  phone               String    @unique
+  name                String?
+  email               String?
+  referralCode        String    @unique
+  referredById        String?
+  referredBy          User?     @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals           User[]    @relation("UserReferrals")
+  password            String?
+  pin                 String?
+  kycVerified         Boolean   @default(false)
+  isActive            Boolean   @default(true)
+  isSellActive        Boolean   @default(false)
+  sellActivatedAt     DateTime?
+  paymentAppInstalled Boolean   @default(false)
+  totalCollection     Decimal   @default(0.00) @db.Decimal(12, 2)
+  totalPayout         Decimal   @default(0.00) @db.Decimal(12, 2)
+  role                Role      @default(USER)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  wallet           Wallet?
-  devices          Device[]
-  smsTasks         SmsTask[]        @relation("AssignedTasks")
-  smsLogs          SmsLog[]
-  transactions     Transaction[]
-  referralsMade    Referral[]       @relation("ReferrerRelation")
-  referralReceived Referral?        @relation("ReferredRelation")
-  paymentAccounts  PaymentAccount[]
-  receivedSmsLogs  ReceivedSmsLog[]
+  wallet              Wallet?
+  devices             Device[]
+  smsTasks            SmsTask[]         @relation("AssignedTasks")
+  smsLogs             SmsLog[]
+  transactions        Transaction[]
+  referralsMade       Referral[]        @relation("ReferrerRelation")
+  referralReceived    Referral?         @relation("ReferredRelation")
+  paymentAccounts     PaymentAccount[]
+  receivedSmsLogs     ReceivedSmsLog[]
+  paymentTasks        PaymentTask[]     @relation("AssignedPaymentTasks")
+  taskProofs          TaskProof[]
+  userUpiAccounts     UserUpiAccount[]
+  newbieReward        NewbieReward?
+  withdrawals         Withdrawal[]
+  notifications       Notification[]
 }
 
 model Wallet {
@@ -71,8 +119,11 @@ model Wallet {
   userId         String   @unique
   user           User     @relation(fields: [userId], references: [id])
   balance        Decimal  @default(0.00) @db.Decimal(10, 2)
+  reward         Decimal  @default(0.00) @db.Decimal(10, 2)
+  pending        Decimal  @default(0.00) @db.Decimal(10, 2)
   totalEarned    Decimal  @default(0.00) @db.Decimal(10, 2)
   totalWithdrawn Decimal  @default(0.00) @db.Decimal(10, 2)
+  createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
 
@@ -120,6 +171,7 @@ model Transaction {
   paymentMethod    String?
   paymentDetails   Json?
   razorpayPayoutId String?
+  relatedTaskId    String?
   description      String?
   createdAt        DateTime          @default(now())
 }
@@ -168,6 +220,8 @@ model Referral {
   referrer       User     @relation("ReferrerRelation", fields: [referrerId], references: [id])
   referredId     String   @unique
   referred       User     @relation("ReferredRelation", fields: [referredId], references: [id])
+  level          String   @default("B")
+  commissionRate Decimal  @default(0.00) @db.Decimal(5, 2)
   bonusPaid      Boolean  @default(false)
   referrerBonus  Decimal  @default(10.00) @db.Decimal(10, 2)
   referredBonus  Decimal  @default(5.00)  @db.Decimal(10, 2)
@@ -175,9 +229,19 @@ model Referral {
 }
 
 model PlatformSettings {
-  id                String   @id @default("default")
-  perRoundSendLimit Int      @default(25)
-  updatedAt         DateTime @updatedAt
+  id                       String   @id @default("default")
+  perRoundSendLimit        Int      @default(25)
+  defaultCommissionRate    Decimal  @default(4.5) @db.Decimal(5, 2)
+  minWithdrawalAmount      Decimal  @default(50.00) @db.Decimal(10, 2)
+  maxWithdrawalPerDay      Decimal  @default(10000.00) @db.Decimal(10, 2)
+  newbieRewardAmount       Decimal  @default(350.00) @db.Decimal(10, 2)
+  newbieRewardThreshold    Decimal  @default(2000.00) @db.Decimal(12, 2)
+  signupBonus              Decimal  @default(0.00) @db.Decimal(10, 2)
+  referrerBonus            Decimal  @default(10.00) @db.Decimal(10, 2)
+  referredBonus            Decimal  @default(5.00) @db.Decimal(10, 2)
+  cashbackDisplayRate      Decimal  @default(4.5) @db.Decimal(5, 2)
+  paymentWarningMessage    String   @default("Please use Freecharge or Mobikwik or amazon wallet for payment!")
+  updatedAt                DateTime @updatedAt
 }
 
 model PaymentAccount {
@@ -204,4 +268,95 @@ model AppVersion {
   forceUpdate   Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model PaymentTask {
+  id               String     @id @default(uuid())
+  // code must be exactly 6 alphanumeric characters — enforced by @db.Char(6) and generated by generateTaskCode() in helpers.js
+  code             String     @unique @db.Char(6)
+  title            String?
+  amount           Decimal    @db.Decimal(12, 2)
+  commissionRate   Decimal    @default(4.5) @db.Decimal(5, 2)
+  commissionAmount Decimal    @db.Decimal(12, 2)
+  recipientName    String?
+  recipientUPI     String
+  paymentMethod    String     @default("UPI")
+  instructions     String?
+  status           TaskStatus @default(PENDING)
+  assignedToId     String?
+  assignedTo       User?      @relation("AssignedPaymentTasks", fields: [assignedToId], references: [id])
+  claimedAt        DateTime?
+  completedAt      DateTime?
+  expiresAt        DateTime?
+  priority         Int        @default(0)
+  createdAt        DateTime   @default(now())
+
+  proofs TaskProof[]
+}
+
+model TaskProof {
+  id            String      @id @default(uuid())
+  taskId        String
+  task          PaymentTask @relation(fields: [taskId], references: [id])
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  screenshotUrl String?
+  transactionId String?
+  notes         String?
+  isVerified    Boolean     @default(false)
+  verifiedAt    DateTime?
+  verifiedBy    String?
+  createdAt     DateTime    @default(now())
+}
+
+model UserUpiAccount {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  upiType        String    @default("UPI")
+  upiId          String
+  status         UpiStatus @default(ACTIVE)
+  riskLevel      RiskLevel @default(NONE)
+  limitMin       Decimal   @default(10.00) @db.Decimal(12, 2)
+  limitMax       Decimal   @default(100000.00) @db.Decimal(12, 2)
+  paymentAppName String?
+  isDefault      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+}
+
+model NewbieReward {
+  id                        String   @id @default(uuid())
+  userId                    String   @unique
+  user                      User     @relation(fields: [userId], references: [id])
+  amount                    Decimal  @default(350.00) @db.Decimal(10, 2)
+  totalTransactionsRequired Decimal  @default(2000.00) @db.Decimal(12, 2)
+  currentTransactionTotal   Decimal  @default(0.00) @db.Decimal(12, 2)
+  isClaimed                 Boolean  @default(false)
+  claimedAt                 DateTime?
+  createdAt                 DateTime @default(now())
+}
+
+model Withdrawal {
+  id               String           @id @default(uuid())
+  userId           String
+  user             User             @relation(fields: [userId], references: [id])
+  amount           Decimal          @db.Decimal(10, 2)
+  status           WithdrawalStatus @default(PENDING)
+  paymentMethod    String
+  paymentDetails   Json
+  pinVerified      Boolean          @default(false)
+  razorpayPayoutId String?
+  processedAt      DateTime?
+  rejectionReason  String?
+  createdAt        DateTime         @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
 }

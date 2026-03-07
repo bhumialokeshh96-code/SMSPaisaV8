@@ -433,11 +433,20 @@ const getAdminPlatformSettings = async (req, res) => {
 
 const updateAdminPlatformSettings = async (req, res) => {
   try {
-    const { perRoundSendLimit } = req.body;
+    const updateData = {};
+    const allowedFields = [
+      'perRoundSendLimit', 'defaultCommissionRate', 'minWithdrawalAmount',
+      'maxWithdrawalPerDay', 'newbieRewardAmount', 'newbieRewardThreshold',
+      'referrerBonus', 'referredBonus', 'cashbackDisplayRate', 'paymentWarningMessage',
+    ];
+    allowedFields.forEach((f) => {
+      if (req.body[f] !== undefined) updateData[f] = req.body[f];
+    });
+
     const settings = await prisma.platformSettings.upsert({
       where: { id: 'default' },
-      update: { perRoundSendLimit },
-      create: { id: 'default', perRoundSendLimit },
+      update: updateData,
+      create: { id: 'default', ...updateData },
     });
     return successResponse(res, { settings });
   } catch (err) {
@@ -584,6 +593,305 @@ const forcePayReferralBonus = async (req, res) => {
   }
 };
 
+// ---- PayTaskr Admin Functions ----
+
+const createPaymentTask = async (req, res) => {
+  try {
+    const { title, amount, commissionRate, recipientName, recipientUPI, paymentMethod, instructions, priority, expiresAt } = req.body;
+
+    const { generateTaskCode } = require('../utils/helpers');
+    const { calculateCommission } = require('../services/commissionService');
+    const settings = await prisma.platformSettings.findUnique({ where: { id: 'default' } });
+    const rate = commissionRate ?? parseFloat(settings?.defaultCommissionRate ?? 4.5);
+    const commissionAmount = calculateCommission(amount, rate);
+
+    let code;
+    let found = false;
+    for (let i = 0; i < 10; i++) {
+      code = generateTaskCode();
+      const existing = await prisma.paymentTask.findUnique({ where: { code } });
+      if (!existing) { found = true; break; }
+    }
+    if (!found) {
+      return errorResponse(res, 'Failed to generate unique task code', 'SERVER_ERROR', 500);
+    }
+
+    const task = await prisma.paymentTask.create({
+      data: {
+        code,
+        title,
+        amount,
+        commissionRate: rate,
+        commissionAmount,
+        recipientName,
+        recipientUPI,
+        paymentMethod: paymentMethod || 'UPI',
+        instructions,
+        priority: priority || 0,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      },
+    });
+
+    return successResponse(res, task, 201);
+  } catch (err) {
+    console.error('createPaymentTask error:', err);
+    return errorResponse(res, 'Failed to create payment task', 'SERVER_ERROR', 500);
+  }
+};
+
+const listPaymentTasks = async (req, res) => {
+  try {
+    const { page, limit, skip, take } = paginate(req.query.page, req.query.limit);
+    const { status } = req.query;
+
+    const where = {};
+    if (status) where.status = status;
+
+    const [tasks, total] = await Promise.all([
+      prisma.paymentTask.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: { assignedTo: { select: { id: true, phone: true, name: true } } },
+      }),
+      prisma.paymentTask.count({ where }),
+    ]);
+
+    return successResponse(res, { tasks, pagination: paginationMeta(total, page, limit) });
+  } catch (err) {
+    console.error('listPaymentTasks error:', err);
+    return errorResponse(res, 'Failed to list payment tasks', 'SERVER_ERROR', 500);
+  }
+};
+
+const verifyTaskProof = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { creditCommission } = require('../services/commissionService');
+    const { incrementRewardProgress } = require('../services/newbieRewardService');
+
+    const task = await prisma.paymentTask.findUnique({
+      where: { id },
+      include: { proofs: { orderBy: { createdAt: 'desc' }, take: 1 } },
+    });
+    if (!task) return errorResponse(res, 'Task not found', 'NOT_FOUND', 404);
+    if (task.status !== 'PROOF_UPLOADED') return errorResponse(res, 'Task not in proof-uploaded state', 'CONFLICT', 409);
+
+    const proof = task.proofs[0];
+    if (!proof) return errorResponse(res, 'No proof found', 'NOT_FOUND', 404);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.paymentTask.update({
+        where: { id },
+        data: { status: 'COMPLETED', completedAt: new Date() },
+      });
+
+      // Move pending → balance
+      await tx.wallet.update({
+        where: { userId: task.assignedToId },
+        data: { pending: { decrement: task.commissionAmount } },
+      });
+
+      await tx.taskProof.update({
+        where: { id: proof.id },
+        data: { isVerified: true, verifiedAt: new Date(), verifiedBy: req.user.id },
+      });
+    });
+
+    // Credit commission (balance + totalEarned)
+    await creditCommission(task.assignedToId, task.id, task.amount, task.commissionAmount);
+
+    // Update newbie reward progress
+    await incrementRewardProgress(task.assignedToId, task.amount);
+
+    // Activate sell if first completed task
+    const completedCount = await prisma.paymentTask.count({
+      where: { assignedToId: task.assignedToId, status: 'COMPLETED' },
+    });
+    if (completedCount === 1) {
+      await prisma.user.update({
+        where: { id: task.assignedToId },
+        data: { isSellActive: true, sellActivatedAt: new Date() },
+      });
+    }
+
+    // Notify user
+    await prisma.notification.create({
+      data: {
+        userId: task.assignedToId,
+        title: 'Payment Verified!',
+        message: `Your payment task ${task.code} has been verified. ∫${task.commissionAmount} credited to your balance.`,
+      },
+    });
+
+    return successResponse(res, { message: 'Task verified and commission credited' });
+  } catch (err) {
+    console.error('verifyTaskProof error:', err);
+    return errorResponse(res, 'Failed to verify task', 'SERVER_ERROR', 500);
+  }
+};
+
+const rejectTaskProof = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const task = await prisma.paymentTask.findUnique({ where: { id } });
+    if (!task) return errorResponse(res, 'Task not found', 'NOT_FOUND', 404);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.paymentTask.update({
+        where: { id },
+        data: { status: 'FAILED', completedAt: new Date() },
+      });
+
+      // Return pending amount to balance
+      if (task.assignedToId) {
+        await tx.wallet.update({
+          where: { userId: task.assignedToId },
+          data: { pending: { decrement: task.commissionAmount } },
+        });
+      }
+    });
+
+    if (task.assignedToId) {
+      await prisma.notification.create({
+        data: {
+          userId: task.assignedToId,
+          title: 'Payment Rejected',
+          message: `Your payment task ${task.code} proof was rejected. ${reason ? 'Reason: ' + reason : ''}`,
+        },
+      });
+    }
+
+    return successResponse(res, { message: 'Task rejected' });
+  } catch (err) {
+    console.error('rejectTaskProof error:', err);
+    return errorResponse(res, 'Failed to reject task', 'SERVER_ERROR', 500);
+  }
+};
+
+const listPaytaskrWithdrawals = async (req, res) => {
+  try {
+    const { page, limit, skip, take } = paginate(req.query.page, req.query.limit);
+    const { status } = req.query;
+
+    const where = {};
+    if (status) where.status = status;
+
+    const [withdrawals, total] = await Promise.all([
+      prisma.withdrawal.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: { user: { select: { id: true, phone: true, name: true } } },
+      }),
+      prisma.withdrawal.count({ where }),
+    ]);
+
+    return successResponse(res, { withdrawals, pagination: paginationMeta(total, page, limit) });
+  } catch (err) {
+    console.error('listPaytaskrWithdrawals error:', err);
+    return errorResponse(res, 'Failed to list withdrawals', 'SERVER_ERROR', 500);
+  }
+};
+
+const approvePaytaskrWithdrawal = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const withdrawal = await prisma.withdrawal.findUnique({ where: { id } });
+    if (!withdrawal) return errorResponse(res, 'Withdrawal not found', 'NOT_FOUND', 404);
+    if (withdrawal.status !== 'PENDING') return errorResponse(res, 'Withdrawal not pending', 'CONFLICT', 409);
+
+    await prisma.withdrawal.update({
+      where: { id },
+      data: { status: 'APPROVED', processedAt: new Date() },
+    });
+
+    await prisma.notification.create({
+      data: {
+        userId: withdrawal.userId,
+        title: 'Withdrawal Approved',
+        message: `Your withdrawal of ∫${withdrawal.amount} has been approved.`,
+      },
+    });
+
+    return successResponse(res, { message: 'Withdrawal approved' });
+  } catch (err) {
+    console.error('approvePaytaskrWithdrawal error:', err);
+    return errorResponse(res, 'Failed to approve withdrawal', 'SERVER_ERROR', 500);
+  }
+};
+
+const rejectPaytaskrWithdrawal = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const withdrawal = await prisma.withdrawal.findUnique({ where: { id } });
+    if (!withdrawal) return errorResponse(res, 'Withdrawal not found', 'NOT_FOUND', 404);
+    if (!['PENDING', 'APPROVED'].includes(withdrawal.status)) {
+      return errorResponse(res, 'Cannot reject this withdrawal', 'CONFLICT', 409);
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.withdrawal.update({
+        where: { id },
+        data: { status: 'REJECTED', rejectionReason: reason, processedAt: new Date() },
+      });
+
+      // Refund balance
+      await tx.wallet.update({
+        where: { userId: withdrawal.userId },
+        data: {
+          balance: { increment: withdrawal.amount },
+          totalWithdrawn: { decrement: withdrawal.amount },
+        },
+      });
+
+      await tx.user.update({
+        where: { id: withdrawal.userId },
+        data: { totalPayout: { decrement: withdrawal.amount } },
+      });
+    });
+
+    await prisma.notification.create({
+      data: {
+        userId: withdrawal.userId,
+        title: 'Withdrawal Rejected',
+        message: `Your withdrawal of ∫${withdrawal.amount} was rejected. ${reason ? 'Reason: ' + reason : ''} Amount has been refunded.`,
+      },
+    });
+
+    return successResponse(res, { message: 'Withdrawal rejected and refunded' });
+  } catch (err) {
+    console.error('rejectPaytaskrWithdrawal error:', err);
+    return errorResponse(res, 'Failed to reject withdrawal', 'SERVER_ERROR', 500);
+  }
+};
+
+const updateUpiAccountStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, riskLevel } = req.body;
+
+    const account = await prisma.userUpiAccount.findUnique({ where: { id } });
+    if (!account) return errorResponse(res, 'UPI account not found', 'NOT_FOUND', 404);
+
+    const updated = await prisma.userUpiAccount.update({
+      where: { id },
+      data: { status, riskLevel },
+    });
+
+    return successResponse(res, updated);
+  } catch (err) {
+    console.error('updateUpiAccountStatus error:', err);
+    return errorResponse(res, 'Failed to update UPI account', 'SERVER_ERROR', 500);
+  }
+};
+
 module.exports = {
   listUsers, getUserById, getPlatformStats, getOnlineDevices,
   createSmsTask, bulkCreateSmsTasks, assignTaskToUser, listWithdrawals, approveWithdrawal,
@@ -592,4 +900,7 @@ module.exports = {
   getAdminPlatformSettings, updateAdminPlatformSettings,
   updateTaskStatus, getAdminWeeklyChart,
   listReferrals, forcePayReferralBonus,
+  createPaymentTask, listPaymentTasks, verifyTaskProof, rejectTaskProof,
+  listPaytaskrWithdrawals, approvePaytaskrWithdrawal, rejectPaytaskrWithdrawal,
+  updateUpiAccountStatus,
 };
