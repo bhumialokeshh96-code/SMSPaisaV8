@@ -1,5 +1,6 @@
 const prisma = require('../config/database');
 const { successResponse, errorResponse, paginate, paginationMeta } = require('../utils/helpers');
+const constants = require('../utils/constants');
 const { incrementRewardProgress } = require('../services/newbieRewardService');
 
 // GET /api/tasks/available
@@ -62,7 +63,7 @@ const claimTask = async (req, res) => {
         status: 'CLAIMED',
         assignedToId: req.user.id,
         claimedAt: new Date(),
-        expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 min to complete
+        expiresAt: new Date(Date.now() + constants.TASK_CLAIM_EXPIRY_MINUTES * 60 * 1000),
       },
     });
 

@@ -76,7 +76,8 @@ const claimNewbieRewardHandler = async (req, res) => {
       reward: parseFloat(wallet.reward),
     });
   } catch (err) {
-    if (err.message.includes('Complete') || err.message.includes('already claimed') || err.message.includes('not found')) {
+    const userFacingErrors = ['Reward already claimed', 'Newbie reward record not found', 'Complete'];
+    if (userFacingErrors.some((msg) => err.message && err.message.startsWith(msg))) {
       return errorResponse(res, err.message, 'NOT_ELIGIBLE', 400);
     }
     console.error('claimNewbieReward error:', err);

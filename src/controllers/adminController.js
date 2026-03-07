@@ -600,18 +600,21 @@ const createPaymentTask = async (req, res) => {
     const { title, amount, commissionRate, recipientName, recipientUPI, paymentMethod, instructions, priority, expiresAt } = req.body;
 
     const { generateTaskCode } = require('../utils/helpers');
+    const { calculateCommission } = require('../services/commissionService');
     const settings = await prisma.platformSettings.findUnique({ where: { id: 'default' } });
     const rate = commissionRate ?? parseFloat(settings?.defaultCommissionRate ?? 4.5);
-    const commissionAmount = Math.round(parseFloat(amount) * rate) / 100;
+    const commissionAmount = calculateCommission(amount, rate);
 
     let code;
-    let retries = 0;
-    do {
+    let found = false;
+    for (let i = 0; i < 10; i++) {
       code = generateTaskCode();
       const existing = await prisma.paymentTask.findUnique({ where: { code } });
-      if (!existing) break;
-      retries++;
-    } while (retries < 10);
+      if (!existing) { found = true; break; }
+    }
+    if (!found) {
+      return errorResponse(res, 'Failed to generate unique task code', 'SERVER_ERROR', 500);
+    }
 
     const task = await prisma.paymentTask.create({
       data: {

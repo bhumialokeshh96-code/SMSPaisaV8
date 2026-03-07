@@ -31,6 +31,16 @@ export default function Settings() {
   const handleChange = (key, value) => setSettings(prev => ({ ...prev, [key]: value }));
 
   const handleSave = async () => {
+    // Validate numeric fields
+    const numericFields = ['perRoundSendLimit', 'defaultCommissionRate', 'minWithdrawalAmount',
+      'maxWithdrawalPerDay', 'newbieRewardAmount', 'newbieRewardThreshold', 'referrerBonus', 'referredBonus', 'cashbackDisplayRate'];
+    for (const f of numericFields) {
+      const val = parseFloat(settings[f]);
+      if (isNaN(val) || val < 0) {
+        toast.error(`Invalid value for ${f}`);
+        return;
+      }
+    }
     setSaving(true);
     try {
       await client.put('/api/admin/settings', {

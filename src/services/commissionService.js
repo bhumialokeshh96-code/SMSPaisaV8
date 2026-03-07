@@ -1,10 +1,11 @@
 const prisma = require('../config/database');
 
 /**
- * Calculate commission amount: amount × commissionRate / 100
+ * Calculate commission amount: (amount × commissionRate) / 100
+ * Rounds to 2 decimal places.
  */
 const calculateCommission = (amount, commissionRate) => {
-  return Math.round(parseFloat(amount) * parseFloat(commissionRate)) / 100;
+  return Math.round((parseFloat(amount) * parseFloat(commissionRate)) / 100 * 100) / 100;
 };
 
 /**
