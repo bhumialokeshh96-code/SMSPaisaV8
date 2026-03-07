@@ -18,9 +18,7 @@ const schemas = {
     phone: Joi.string().pattern(/^\+?[1-9]\d{9,14}$/).required(),
     email: Joi.string().email().optional(),
     password: Joi.string().min(8).required(),
-    pin: Joi.string().pattern(/^\d{6}$/).optional(),
-    referralCode: Joi.string().optional().allow('', null),
-    deviceId: Joi.string().optional(),
+    deviceId: Joi.string().required(),
   }),
 
   login: Joi.object({
@@ -110,7 +108,7 @@ const schemas = {
 
   forgotPassword: Joi.object({
     phone: Joi.string().required(),
-    deviceId: Joi.string().optional(),
+    deviceId: Joi.string().required(),
   }),
 
   resetPassword: Joi.object({
@@ -121,51 +119,6 @@ const schemas = {
   changePassword: Joi.object({
     currentPassword: Joi.string().required(),
     newPassword: Joi.string().min(6).required(),
-  }),
-
-  changePin: Joi.object({
-    oldPin: Joi.string().pattern(/^\d{6}$/).optional().allow('', null),
-    newPin: Joi.string().pattern(/^\d{6}$/).required(),
-  }),
-
-  requestWithdrawal: Joi.object({
-    amount: Joi.number().positive().required(),
-    paymentMethod: Joi.string().valid('UPI', 'BANK').required(),
-    paymentDetails: Joi.object().required(),
-    pin: Joi.string().pattern(/^\d{6}$/).required(),
-  }),
-
-  addUpi: Joi.object({
-    upiId: Joi.string().required(),
-    upiType: Joi.string().optional().default('UPI'),
-    paymentAppName: Joi.string().optional().allow('', null),
-    limitMin: Joi.number().positive().optional(),
-    limitMax: Joi.number().positive().optional(),
-  }),
-
-  createPaymentTask: Joi.object({
-    title: Joi.string().optional().allow('', null),
-    amount: Joi.number().positive().required(),
-    commissionRate: Joi.number().min(0).max(100).optional(),
-    recipientName: Joi.string().optional().allow('', null),
-    recipientUPI: Joi.string().required(),
-    paymentMethod: Joi.string().optional().default('UPI'),
-    instructions: Joi.string().optional().allow('', null),
-    priority: Joi.number().integer().min(0).optional(),
-    expiresAt: Joi.string().isoDate().optional(),
-  }),
-
-  updatePaytaskrSettings: Joi.object({
-    perRoundSendLimit: Joi.number().integer().min(1).max(100).optional(),
-    defaultCommissionRate: Joi.number().min(0).max(100).optional(),
-    minWithdrawalAmount: Joi.number().positive().optional(),
-    maxWithdrawalPerDay: Joi.number().positive().optional(),
-    newbieRewardAmount: Joi.number().positive().optional(),
-    newbieRewardThreshold: Joi.number().positive().optional(),
-    referrerBonus: Joi.number().min(0).optional(),
-    referredBonus: Joi.number().min(0).optional(),
-    cashbackDisplayRate: Joi.number().min(0).max(100).optional(),
-    paymentWarningMessage: Joi.string().optional().allow('', null),
   }),
 
   reportReceivedSms: Joi.object({

@@ -4,57 +4,39 @@ const { v4: uuidv4 } = require('uuid');
 const prisma = require('../config/database');
 const { getRedisClient } = require('../config/redis');
 const { generateReferralCode, successResponse, errorResponse } = require('../utils/helpers');
-const { createNewbieReward } = require('../services/newbieRewardService');
 
 const register = async (req, res) => {
   try {
-    const { phone, email, password, pin, referralCode: inputReferralCode, deviceId } = req.body;
+    const { phone, email, password, deviceId } = req.body;
 
     const existingUser = await prisma.user.findUnique({ where: { phone } });
     if (existingUser) {
       return errorResponse(res, 'Phone number already registered', 'CONFLICT', 409);
     }
 
-    if (deviceId) {
-      const existingDevice = await prisma.device.findUnique({ where: { deviceId } });
-      if (existingDevice) {
-        return errorResponse(res, 'Device already registered', 'CONFLICT', 409);
-      }
+    const existingDevice = await prisma.device.findUnique({ where: { deviceId } });
+    if (existingDevice) {
+      return errorResponse(res, 'Device already registered', 'CONFLICT', 409);
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const hashedPin = pin ? await bcrypt.hash(pin, 10) : null;
     const referralCode = generateReferralCode();
 
-    const userData = {
-      phone,
-      email,
-      password: hashedPassword,
-      pin: hashedPin,
-      referralCode,
-      wallet: { create: {} },
-    };
-
-    if (deviceId) {
-      userData.devices = {
-        create: { deviceId, deviceName: 'Android Device' },
-      };
-    }
-
-    const user = await prisma.user.create({ data: userData });
-
-    // Create newbie reward record
-    await createNewbieReward(user.id);
-
-    // Apply referral if provided
-    if (inputReferralCode) {
-      const referrer = await prisma.user.findUnique({ where: { referralCode: inputReferralCode } });
-      if (referrer && referrer.id !== user.id) {
-        await prisma.referral.create({
-          data: { referrerId: referrer.id, referredId: user.id, level: 'B' },
-        });
-      }
-    }
+    const user = await prisma.user.create({
+      data: {
+        phone,
+        email,
+        password: hashedPassword,
+        referralCode,
+        wallet: { create: {} },
+        devices: {
+          create: {
+            deviceId,
+            deviceName: 'Android Device',
+          },
+        },
+      },
+    });
 
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES_IN || '30d',
@@ -89,7 +71,7 @@ const login = async (req, res) => {
       expiresIn: process.env.JWT_EXPIRES_IN || '30d',
     });
 
-    return successResponse(res, { token, user: { id: user.id, name: user.name, phone: user.phone, email: user.email, referralCode: user.referralCode, role: user.role, isSellActive: user.isSellActive, createdAt: user.createdAt } });
+    return successResponse(res, { token, user: { id: user.id, name: user.name, phone: user.phone, email: user.email, referralCode: user.referralCode, role: user.role, createdAt: user.createdAt } });
   } catch (err) {
     console.error('login error:', err);
     return errorResponse(res, 'Login failed', 'SERVER_ERROR', 500);
@@ -203,31 +185,4 @@ const changePassword = async (req, res) => {
   }
 };
 
-const changePin = async (req, res) => {
-  try {
-    const { oldPin, newPin } = req.body;
-
-    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
-    if (!user) return errorResponse(res, 'User not found', 'NOT_FOUND', 404);
-
-    if (user.pin) {
-      const isMatch = await bcrypt.compare(oldPin, user.pin);
-      if (!isMatch) {
-        return errorResponse(res, 'Current PIN is incorrect', 'AUTH_ERROR', 401);
-      }
-    }
-
-    const hashedPin = await bcrypt.hash(newPin, 10);
-    await prisma.user.update({
-      where: { id: req.user.id },
-      data: { pin: hashedPin },
-    });
-
-    return successResponse(res, { message: 'PIN changed successfully' });
-  } catch (err) {
-    console.error('changePin error:', err);
-    return errorResponse(res, 'Failed to change PIN', 'SERVER_ERROR', 500);
-  }
-};
-
-module.exports = { register, login, getMe, updateProfile, changePin, forgotPassword, resetPassword, changePassword };
+module.exports = { register, login, getMe, updateProfile, forgotPassword, resetPassword, changePassword };

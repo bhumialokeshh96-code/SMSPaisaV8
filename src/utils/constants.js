@@ -9,12 +9,6 @@ const constants = {
   TASK_TIMEOUT_SECONDS: 60,
   DEFAULT_PAGE_LIMIT: 20,
   MAX_PAGE_LIMIT: 100,
-  // PayTaskr constants
-  DEFAULT_COMMISSION_RATE: parseFloat(process.env.DEFAULT_COMMISSION_RATE) || 4.5,
-  NEWBIE_REWARD_AMOUNT: parseFloat(process.env.NEWBIE_REWARD_AMOUNT) || 350,
-  NEWBIE_REWARD_THRESHOLD: parseFloat(process.env.NEWBIE_REWARD_THRESHOLD) || 2000,
-  TASK_CLAIM_EXPIRY_MINUTES: 30,
-  ITOKEN_SYMBOL: '∫',
 };
 
 module.exports = constants;
