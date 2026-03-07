@@ -4,6 +4,15 @@ const generateReferralCode = () => {
   return uuidv4().replace(/-/g, '').substring(0, 8).toUpperCase();
 };
 
+const generateTaskCode = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+};
+
 const paginate = (page = 1, limit = 20) => {
   const maxLimit = 100;
   const parsedLimit = Math.min(parseInt(limit) || 20, maxLimit);
@@ -40,6 +49,7 @@ const isWithinActiveHours = (startTime, endTime) => {
 
 module.exports = {
   generateReferralCode,
+  generateTaskCode,
   paginate,
   paginationMeta,
   successResponse,
