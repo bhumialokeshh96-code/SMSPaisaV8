@@ -25,24 +25,6 @@ const startStaleTaskCleanup = () => {
       console.error('Daily device reset error:', err);
     }
   });
-
-  // Runs every 5 minutes — expire claimed payment tasks that have passed their expiresAt time
-  cron.schedule('*/5 * * * *', async () => {
-    try {
-      const result = await prisma.paymentTask.updateMany({
-        where: {
-          status: { in: ['CLAIMED', 'IN_PROGRESS'] },
-          expiresAt: { lt: new Date() },
-        },
-        data: { status: 'EXPIRED', assignedToId: null, claimedAt: null },
-      });
-      if (result.count > 0) {
-        console.log(`Payment task expiry: expired ${result.count} task(s)`);
-      }
-    } catch (err) {
-      console.error('Payment task expiry error:', err);
-    }
-  });
 };
 
 module.exports = { startStaleTaskCleanup };

@@ -14,10 +14,9 @@ import Withdrawals from './pages/Withdrawals';
 import Devices from './pages/Devices';
 import Transactions from './pages/Transactions';
 import Settings from './pages/Settings';
+
 import AppVersion from './pages/AppVersion';
 import ReceivedSms from './pages/ReceivedSms';
-import PaymentTasks from './pages/PaymentTasks';
-import PaymentWithdrawals from './pages/PaymentWithdrawals';
 
 export default function App() {
   return (
@@ -42,8 +41,6 @@ export default function App() {
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/app-version" element={<AppVersion />} />
                   <Route path="/sms/received" element={<ReceivedSms />} />
-                  <Route path="/payment-tasks" element={<PaymentTasks />} />
-                  <Route path="/payment-withdrawals" element={<PaymentWithdrawals />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>
