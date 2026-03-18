@@ -220,7 +220,7 @@ class SmsSenderService : Service() {
                 delay(VERIFICATION_WAIT_MS)
 
                 val actualStatus = smsRepository.getLocalLogStatus(task.taskId)
-                val isConfirmedSent = actualStatus == SmsStatus.SENT
+                val isConfirmedSent = actualStatus == SmsStatus.SENT || actualStatus == SmsStatus.DELIVERED
 
                 try {
                     val reportStatus = if (isConfirmedSent) "SENT" else "FAILED"
@@ -442,7 +442,7 @@ class SmsSenderService : Service() {
             for (taskId in pendingTaskIds) {
                 val actualStatus = smsRepository.getLocalLogStatus(taskId)
                 when (actualStatus) {
-                    SmsStatus.SENT -> {
+                    SmsStatus.SENT, SmsStatus.DELIVERED -> {
                         confirmedSentIds.add(taskId)
                         sentTodayCount.incrementAndGet()
                     }
