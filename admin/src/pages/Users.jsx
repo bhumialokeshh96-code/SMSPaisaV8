@@ -12,11 +12,14 @@ export default function Users() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [confirm, setConfirm] = useState(null);
+  const isFirstRender = React.useRef(true); // prevents double-fetch on mount (initial load + search effect)
 
-  const fetchUsers = useCallback(async (page = 1) => {
+  const fetchUsers = useCallback(async (page = 1, searchQuery = '') => {
     setLoading(true);
     try {
-      const res = await client.get(`/api/admin/users?page=${page}&limit=20`);
+      const params = new URLSearchParams({ page, limit: 20 });
+      if (searchQuery) params.set('search', searchQuery);
+      const res = await client.get(`/api/admin/users?${params}`);
       setUsers(res.data.data.users || []);
       setPagination(res.data.data.pagination || { page: 1, totalPages: 1 });
     } catch (err) {
@@ -28,11 +31,22 @@ export default function Users() {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      fetchUsers(1, search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search, fetchUsers]);
+
   const handleToggleActive = async (user) => {
     try {
       await client.put(`/api/admin/users/${user.id}/toggle-active`);
       toast.success(`User ${user.isActive ? 'deactivated' : 'activated'}`);
-      fetchUsers(pagination.page);
+      fetchUsers(pagination.page, search);
     } catch (err) {
       toast.error('Failed to update user');
     }
@@ -44,7 +58,7 @@ export default function Users() {
     try {
       await client.put(`/api/admin/users/${user.id}/role`, { role: newRole });
       toast.success(`Role changed to ${newRole}`);
-      fetchUsers(pagination.page);
+      fetchUsers(pagination.page, search);
     } catch (err) {
       toast.error('Failed to change role');
     }
@@ -55,16 +69,12 @@ export default function Users() {
     try {
       await client.delete(`/api/admin/users/${user.id}`);
       toast.success('User deleted');
-      fetchUsers(pagination.page);
+      fetchUsers(pagination.page, search);
     } catch (err) {
       toast.error('Failed to delete user');
     }
     setConfirm(null);
   };
-
-  const filtered = users.filter(u =>
-    u.phone?.includes(search) || u.name?.toLowerCase().includes(search.toLowerCase())
-  );
 
   if (loading) return <LoadingSpinner size="lg" />;
 
@@ -91,7 +101,7 @@ export default function Users() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map((user) => (
+              {users.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-900">{user.phone}</td>
                   <td className="px-4 py-3 text-gray-600">{user.name || '—'}</td>
@@ -130,7 +140,7 @@ export default function Users() {
             </tbody>
           </table>
         </div>
-        <Pagination page={pagination.page} totalPages={pagination.totalPages} onPageChange={fetchUsers} />
+        <Pagination page={pagination.page} totalPages={pagination.totalPages} onPageChange={(p) => fetchUsers(p, search)} />
       </div>
 
       <ConfirmDialog
