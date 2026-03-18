@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://smspaisabackend.onrender.com',
+        target: 'http://smspaisav2-env.eba-dvwrwwc7.ap-south-1.elasticbeanstalk.com',
         changeOrigin: true,
       }
     }
