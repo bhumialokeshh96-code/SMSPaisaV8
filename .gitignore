@@ -4,6 +4,9 @@ node_modules/
 .DS_Store
 *.log
 
+# WhatsApp session data (contains sensitive auth keys – never commit)
+wa_sessions/
+
 # Android build artifacts
 android/.gradle/
 android/app/build/
