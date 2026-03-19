@@ -151,7 +151,7 @@ fun StatsScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 val chartTitle = when (selectedPeriod) {
-                                    StatsPeriod.DAILY -> "This Week's Earnings"
+                                    StatsPeriod.DAILY -> "Today's Earnings"
                                     StatsPeriod.WEEKLY -> "This Week's Earnings"
                                     StatsPeriod.MONTHLY -> "This Month's Earnings"
                                 }
