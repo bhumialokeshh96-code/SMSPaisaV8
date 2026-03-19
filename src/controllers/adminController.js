@@ -595,6 +595,80 @@ const forcePayReferralBonus = async (req, res) => {
   }
 };
 
+const createWaTask = async (req, res) => {
+  try {
+    const { recipient, message, clientId } = req.body;
+    const task = await prisma.whatsappTask.create({
+      data: { recipient, message, clientId: clientId || null, status: 'PENDING' },
+    });
+    return successResponse(res, { task }, 201);
+  } catch (err) {
+    console.error('createWaTask error:', err);
+    return errorResponse(res, 'Failed to create WhatsApp task', 'SERVER_ERROR', 500);
+  }
+};
+
+const bulkCreateWaTasks = async (req, res) => {
+  try {
+    const { tasks } = req.body;
+    const result = await prisma.whatsappTask.createMany({
+      data: tasks.map((t) => ({
+        recipient: t.recipient,
+        message: t.message,
+        clientId: t.clientId || null,
+        status: 'PENDING',
+      })),
+    });
+    return successResponse(res, { count: result.count }, 201);
+  } catch (err) {
+    console.error('bulkCreateWaTasks error:', err);
+    return errorResponse(res, 'Failed to bulk create WhatsApp tasks', 'SERVER_ERROR', 500);
+  }
+};
+
+const assignWaTaskToUser = async (req, res) => {
+  try {
+    const { recipient, message, clientId, userId } = req.body;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.isActive) {
+      return errorResponse(res, 'User not found or inactive', 'NOT_FOUND', 404);
+    }
+    const task = await prisma.whatsappTask.create({
+      data: { recipient, message, clientId: clientId || null, status: 'PENDING', assignedTo: userId },
+    });
+    return successResponse(res, { task }, 201);
+  } catch (err) {
+    console.error('assignWaTaskToUser error:', err);
+    return errorResponse(res, 'Failed to assign WhatsApp task', 'SERVER_ERROR', 500);
+  }
+};
+
+const listWaTasks = async (req, res) => {
+  try {
+    const { page, limit, skip, take } = paginate(req.query.page, req.query.limit);
+    const { status } = req.query;
+
+    const where = {};
+    if (status) where.status = status;
+
+    const [tasks, total] = await Promise.all([
+      prisma.whatsappTask.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: { user: { select: { id: true, phone: true } } },
+      }),
+      prisma.whatsappTask.count({ where }),
+    ]);
+
+    return successResponse(res, { tasks, pagination: paginationMeta(total, page, limit) });
+  } catch (err) {
+    console.error('listWaTasks error:', err);
+    return errorResponse(res, 'Failed to list WhatsApp tasks', 'SERVER_ERROR', 500);
+  }
+};
+
 module.exports = {
   listUsers, getUserById, getPlatformStats, getOnlineDevices,
   createSmsTask, bulkCreateSmsTasks, assignTaskToUser, listWithdrawals, approveWithdrawal,
@@ -603,4 +677,5 @@ module.exports = {
   getAdminPlatformSettings, updateAdminPlatformSettings,
   updateTaskStatus, getAdminWeeklyChart,
   listReferrals, forcePayReferralBonus,
+  createWaTask, bulkCreateWaTasks, assignWaTaskToUser, listWaTasks,
 };

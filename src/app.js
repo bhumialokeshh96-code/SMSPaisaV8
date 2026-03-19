@@ -19,6 +19,7 @@ const whatsappRoutes = require('./routes/whatsapp');
 const { setupSocketHandlers } = require('./websocket/socketHandler');
 const { startStaleTaskCleanup } = require('./cron/staleTaskCleanup');
 const { initWaManager } = require('./whatsapp/WaManager');
+const { start: startWaWorker } = require('./whatsapp/WaWorker');
 const { errorResponse } = require('./utils/helpers');
 const { apiRateLimit, staticRateLimit } = require('./middleware/rateLimit');
 
@@ -79,6 +80,7 @@ if (require.main === module) {
   server.listen(PORT, async () => {
     console.log(`SMSPaisa server running on port ${PORT}`);
     await initWaManager();
+    startWaWorker(io);
   });
 }
 

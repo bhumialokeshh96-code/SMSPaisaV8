@@ -297,4 +297,11 @@ const emitReceivedSmsToAdmin = (io, log) => {
   io.to('admin-room').emit('new-received-sms', log);
 };
 
-module.exports = { setupSocketHandlers, pushTaskToDevice, cancelTask, emitBalanceUpdateByUserId, emitReceivedSmsToAdmin };
+const emitWaProgressUpdate = (io, userId, data) => {
+  const socketId = connectedUsers.get(userId);
+  if (socketId) {
+    io.to(socketId).emit('wa_progress_update', data);
+  }
+};
+
+module.exports = { setupSocketHandlers, pushTaskToDevice, cancelTask, emitBalanceUpdateByUserId, emitReceivedSmsToAdmin, emitWaProgressUpdate };

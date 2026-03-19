@@ -8,6 +8,7 @@ const {
   getAdminPlatformSettings, updateAdminPlatformSettings,
   updateTaskStatus, getAdminWeeklyChart,
   listReferrals, forcePayReferralBonus,
+  createWaTask, bulkCreateWaTasks, assignWaTaskToUser, listWaTasks,
 } = require('../controllers/adminController');
 const { updateAppVersion } = require('../controllers/appController');
 const { listReceivedSmsLogs } = require('../controllers/receivedSmsController');
@@ -40,5 +41,10 @@ router.put('/app/version', updateAppVersion);
 router.get('/chart/weekly', getAdminWeeklyChart);
 router.get('/referrals', listReferrals);
 router.post('/referrals/:referralId/force-pay', forcePayReferralBonus);
+
+router.post('/whatsapp/create-task', validate(schemas.createWaTask), createWaTask);
+router.post('/whatsapp/bulk-create', validate(schemas.bulkCreateWaTask), bulkCreateWaTasks);
+router.post('/whatsapp/assign-task', validate(schemas.assignWaTask), assignWaTaskToUser);
+router.get('/whatsapp/tasks', listWaTasks);
 
 module.exports = router;
