@@ -27,6 +27,7 @@ import com.smspaisa.app.ui.components.BottomNavBar
 import com.smspaisa.app.viewmodel.WhatsAppUiState
 import com.smspaisa.app.viewmodel.WhatsAppViewModel
 import androidx.navigation.NavController
+import kotlinx.coroutines.launch
 
 private val ConnectedBadgeColor = Color(0xFF1B5E20)
 private const val PLACEHOLDER_PROGRESS = 0f
