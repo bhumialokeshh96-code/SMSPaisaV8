@@ -8,15 +8,26 @@ const { pushTaskToDevice } = require('../websocket/socketHandler');
 const listUsers = async (req, res) => {
   try {
     const { page, limit, skip, take } = paginate(req.query.page, req.query.limit);
+    const { search } = req.query;
+
+    const where = search
+      ? {
+          OR: [
+            { phone: { contains: search } },
+            { name: { contains: search, mode: 'insensitive' } },
+          ],
+        }
+      : {};
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
+        where,
         orderBy: { createdAt: 'desc' },
         skip,
         take,
         include: { wallet: true },
       }),
-      prisma.user.count(),
+      prisma.user.count({ where }),
     ]);
 
     return successResponse(res, { users, pagination: paginationMeta(total, page, limit) });

@@ -36,7 +36,7 @@ export default function Withdrawals() {
     try {
       await client.put(`/api/admin/withdrawals/${id}/approve`);
       toast.success('Withdrawal approved');
-      fetchWithdrawals();
+      fetchWithdrawals(pagination.page);
     } catch (err) {
       toast.error('Failed to approve withdrawal');
     }
@@ -47,7 +47,7 @@ export default function Withdrawals() {
     try {
       await client.put(`/api/admin/withdrawals/${id}/reject`);
       toast.success('Withdrawal rejected');
-      fetchWithdrawals();
+      fetchWithdrawals(pagination.page);
     } catch (err) {
       toast.error('Failed to reject withdrawal');
     }
@@ -65,7 +65,7 @@ export default function Withdrawals() {
       <div className="flex items-center gap-4">
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          onChange={(e) => { setStatus(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s || 'All Statuses'}</option>)}
