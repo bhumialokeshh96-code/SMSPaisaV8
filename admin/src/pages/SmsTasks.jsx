@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import Papa from 'papaparse';
 import client from '../api/client';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Pagination from '../components/Pagination';
@@ -7,6 +8,22 @@ import toast from 'react-hot-toast';
 const STATUS_OPTIONS = ['', 'QUEUED', 'ASSIGNED', 'SENT', 'DELIVERED', 'FAILED'];
 
 const EMPTY_ROW = () => ({ recipient: '', message: '', clientId: '', priority: 0 });
+
+// ── CSV smart-column detection ────────────────────────────────────────────────
+const RECIPIENT_ALIASES = ['recipient', 'phone', 'number', 'contact', 'mobile', 'phonenumber', 'mobilenumber', 'to', 'cell', 'telephone'];
+const MESSAGE_ALIASES   = ['message', 'msg', 'text', 'content', 'sms', 'body', 'smsmessage', 'smscontent'];
+const CLIENT_ALIASES    = ['clientid', 'client', 'clientcode', 'cid', 'id'];
+const PRIORITY_ALIASES  = ['priority', 'prio', 'level', 'prioritylevel'];
+
+function detectColIndex(headers, aliases) {
+  const norm = headers.map(h => h.toLowerCase().trim().replace(/[^a-z0-9]/g, ''));
+  for (const alias of aliases) {
+    const needle = alias.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const idx = norm.indexOf(needle);
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
 
 export default function SmsTasks() {
   const [tasks, setTasks] = useState([]);
@@ -28,6 +45,13 @@ export default function SmsTasks() {
 
   // Bulk rows: each row has recipient, message, clientId, priority
   const [bulkRows, setBulkRows] = useState([EMPTY_ROW()]);
+
+  // CSV upload state
+  const csvFileRef = useRef(null);
+  const [csvParsedRows, setCsvParsedRows] = useState([]);   // rows from CSV before defaults applied
+  const [csvMissingFields, setCsvMissingFields] = useState([]); // ['message','clientId','priority']
+  const [csvDefaults, setCsvDefaults] = useState({ message: '', clientId: '', priority: 0 });
+  const [showCsvDefaults, setShowCsvDefaults] = useState(false);
 
   const [assignForm, setAssignForm] = useState({ recipient: '', message: '', clientId: '', priority: 0, userId: '', userLabel: '' });
 
@@ -99,6 +123,102 @@ export default function SmsTasks() {
       if (i !== index) return row;
       return { ...row, [field]: field === 'priority' ? (parseInt(value) || 0) : value };
     }));
+  };
+
+  // ── CSV helpers ──────────────────────────────────────────────────────────────
+  const handleCsvFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset input so the same file can be re-uploaded after a reset
+    e.target.value = '';
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: ({ data, meta }) => {
+        const headers = meta.fields || [];
+        if (!headers.length || !data.length) {
+          toast.error('CSV appears to be empty or has no header row');
+          return;
+        }
+
+        const recipientIdx = detectColIndex(headers, RECIPIENT_ALIASES);
+        if (recipientIdx === -1) {
+          toast.error('Could not detect a phone/recipient column in the CSV');
+          return;
+        }
+        const recipientCol = headers[recipientIdx];
+
+        const messageIdx  = detectColIndex(headers, MESSAGE_ALIASES);
+        const clientIdx   = detectColIndex(headers, CLIENT_ALIASES);
+        const priorityIdx = detectColIndex(headers, PRIORITY_ALIASES);
+
+        const messageCol  = messageIdx  !== -1 ? headers[messageIdx]  : null;
+        const clientCol   = clientIdx   !== -1 ? headers[clientIdx]   : null;
+        const priorityCol = priorityIdx !== -1 ? headers[priorityIdx] : null;
+
+        const parsed = data.map(row => ({
+          recipient: String(row[recipientCol] || '').trim(),
+          message:   messageCol  ? String(row[messageCol]  || '').trim() : '',
+          clientId:  clientCol   ? String(row[clientCol]   || '').trim() : '',
+          priority:  priorityCol ? (parseInt(row[priorityCol]) || 0)     : 0,
+        })).filter(r => r.recipient);
+
+        if (!parsed.length) {
+          toast.error('No valid rows found in the CSV (all recipient fields were empty)');
+          return;
+        }
+
+        // Determine which required fields are completely missing across all rows
+        const missingMessage  = parsed.every(r => !r.message);
+        const missingClientId = parsed.every(r => !r.clientId);
+        const missing = [
+          ...(missingMessage  ? ['message']  : []),
+          ...(missingClientId ? ['clientId'] : []),
+        ];
+
+        setCsvParsedRows(parsed);
+
+        if (missing.length) {
+          setCsvMissingFields(missing);
+          setCsvDefaults({ message: '', clientId: '', priority: 0 });
+          setShowCsvDefaults(true);
+          toast(`Found ${parsed.length} row(s). Please fill in the missing fields below.`, { icon: 'ℹ️' });
+        } else {
+          // All required fields present – go straight to preview
+          setBulkRows(parsed);
+          setShowCsvDefaults(false);
+          setCsvParsedRows([]);
+          setCsvMissingFields([]);
+          toast.success(`${parsed.length} row(s) imported from CSV — review and submit`);
+        }
+      },
+      error: () => toast.error('Failed to parse CSV file'),
+    });
+  };
+
+  const applyCsvDefaults = () => {
+    if (csvMissingFields.includes('message') && !csvDefaults.message.trim()) {
+      toast.error('Please enter a default message');
+      return;
+    }
+    if (csvMissingFields.includes('clientId') && !csvDefaults.clientId.trim()) {
+      toast.error('Please enter a default Client ID');
+      return;
+    }
+
+    const merged = csvParsedRows.map(r => ({
+      recipient: r.recipient,
+      message:   r.message  || csvDefaults.message.trim(),
+      clientId:  r.clientId || csvDefaults.clientId.trim(),
+      priority:  r.priority ?? (parseInt(csvDefaults.priority) || 0),
+    }));
+
+    setBulkRows(merged);
+    setShowCsvDefaults(false);
+    setCsvParsedRows([]);
+    setCsvMissingFields([]);
+    toast.success(`${merged.length} row(s) imported from CSV — review and submit`);
   };
 
   const handleBulkCreate = async (e) => {
@@ -207,12 +327,87 @@ export default function SmsTasks() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-800">Bulk Create Tasks</h3>
-            <button
-              type="button"
-              onClick={addBulkRow}
-              className="px-3 py-1.5 text-xs bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-            >+ Add Row</button>
+            <div className="flex items-center gap-2">
+              {/* Hidden file input */}
+              <input
+                ref={csvFileRef}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={handleCsvFile}
+              />
+              <button
+                type="button"
+                onClick={() => csvFileRef.current?.click()}
+                className="px-3 py-1.5 text-xs bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-1"
+              >📂 Upload CSV</button>
+              <button
+                type="button"
+                onClick={addBulkRow}
+                className="px-3 py-1.5 text-xs bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              >+ Add Row</button>
+            </div>
           </div>
+
+          {/* CSV global-defaults panel */}
+          {showCsvDefaults && (
+            <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm font-semibold text-amber-800 mb-1">
+                📋 {csvParsedRows.length} row(s) detected — fill in the missing fields to apply to all rows
+              </p>
+              <p className="text-xs text-amber-600 mb-3">
+                Fields missing from CSV:{' '}
+                <span className="font-medium">{csvMissingFields.join(', ')}</span>
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {csvMissingFields.includes('message') && (
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Default Message *</label>
+                    <textarea
+                      value={csvDefaults.message}
+                      onChange={e => setCsvDefaults(d => ({ ...d, message: e.target.value }))}
+                      rows={2}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="This message will be applied to all rows"
+                    />
+                  </div>
+                )}
+                {csvMissingFields.includes('clientId') && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Default Client ID *</label>
+                    <input
+                      value={csvDefaults.clientId}
+                      onChange={e => setCsvDefaults(d => ({ ...d, clientId: e.target.value }))}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="client-001"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Default Priority</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={csvDefaults.priority}
+                    onChange={e => setCsvDefaults(d => ({ ...d, priority: parseInt(e.target.value) || 0 }))}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={applyCsvDefaults}
+                  className="px-4 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+                >Apply & Preview Rows</button>
+                <button
+                  type="button"
+                  onClick={() => { setShowCsvDefaults(false); setCsvParsedRows([]); setCsvMissingFields([]); setCsvDefaults({ message: '', clientId: '', priority: 0 }); }}
+                  className="px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50"
+                >Cancel</button>
+              </div>
+            </div>
+          )}
           <form onSubmit={handleBulkCreate}>
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
