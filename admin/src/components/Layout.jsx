@@ -9,6 +9,7 @@ const pageTitles = {
   '/sms': 'SMS Tasks',
   '/sms/logs': 'SMS Logs',
   '/sms/received': 'Received SMS',
+  '/whatsapp': 'WhatsApp Tasks',
   '/withdrawals': 'Withdrawals',
   '/devices': 'Devices',
   '/transactions': 'Transactions',

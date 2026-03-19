@@ -40,20 +40,23 @@ enum TransactionStatus {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  phone        String   @unique
-  name         String?
-  email        String?
-  referralCode String   @unique
-  referredById String?
-  referredBy   User?    @relation("UserReferrals", fields: [referredById], references: [id])
-  referrals    User[]   @relation("UserReferrals")
-  password     String?
-  kycVerified  Boolean  @default(false)
-  isActive     Boolean  @default(true)
-  role         Role     @default(USER)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               String   @id @default(uuid())
+  phone            String   @unique
+  name             String?
+  email            String?
+  referralCode     String   @unique
+  referredById     String?
+  referredBy       User?    @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals        User[]   @relation("UserReferrals")
+  password         String?
+  kycVerified      Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  role             Role     @default(USER)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  whatsappNumber   String?  @unique
+  whatsappStatus   String   @default("UNLINKED")
+  waSessionId      String?  @unique
 
   wallet           Wallet?
   devices          Device[]
@@ -64,16 +67,19 @@ model User {
   referralReceived Referral?        @relation("ReferredRelation")
   paymentAccounts  PaymentAccount[]
   receivedSmsLogs  ReceivedSmsLog[]
+  whatsappTasks    WhatsappTask[]   @relation("AssignedWaTasks")
 }
 
 model Wallet {
-  id             String   @id @default(uuid())
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id])
-  balance        Decimal  @default(0.00) @db.Decimal(10, 2)
-  totalEarned    Decimal  @default(0.00) @db.Decimal(10, 2)
-  totalWithdrawn Decimal  @default(0.00) @db.Decimal(10, 2)
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id])
+  balance         Decimal  @default(0.00) @db.Decimal(10, 2)
+  totalEarned     Decimal  @default(0.00) @db.Decimal(10, 2)
+  totalWithdrawn  Decimal  @default(0.00) @db.Decimal(10, 2)
+  waTotalEarned    Decimal  @default(0.00) @db.Decimal(10, 2)
+  waCurrentBalance Decimal  @default(0.00) @db.Decimal(10, 2)
+  updatedAt       DateTime @updatedAt
 }
 
 model SmsTask {
@@ -93,6 +99,18 @@ model SmsTask {
   deliveredAt      DateTime?
 
   smsLogs SmsLog[]
+}
+
+model WhatsappTask {
+  id         Int      @id @default(autoincrement())
+  recipient  String
+  message    String
+  status     String   @default("PENDING")
+  clientId   String?
+  assignedTo String?
+  user       User?    @relation("AssignedWaTasks", fields: [assignedTo], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model SmsLog {
