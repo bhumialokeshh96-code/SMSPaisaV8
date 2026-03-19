@@ -55,8 +55,7 @@ class StatsViewModel @Inject constructor(
                 val (daily, weekly, monthly) = when (period) {
                     StatsPeriod.DAILY -> {
                         val d = apiService.getDailyStats().body()?.data
-                        val w = apiService.getWeeklyStats().body()?.data
-                        Triple(d, w, null)
+                        Triple(d, null, null)
                     }
                     StatsPeriod.WEEKLY -> {
                         val w = apiService.getWeeklyStats().body()?.data

@@ -27,7 +27,19 @@ fun EarningsChart(
     modifier: Modifier = Modifier,
     barColor: Color = MaterialTheme.colorScheme.primary
 ) {
-    if (bars.isEmpty()) return
+    if (bars.isEmpty()) {
+        Box(
+            modifier = modifier.height(200.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "No data available",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            )
+        }
+        return
+    }
 
     val maxValue = bars.maxOfOrNull { it.value } ?: 1f
     val adjustedMax = if (maxValue == 0f) 1f else maxValue
