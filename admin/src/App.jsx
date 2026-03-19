@@ -14,6 +14,7 @@ import Withdrawals from './pages/Withdrawals';
 import Devices from './pages/Devices';
 import Transactions from './pages/Transactions';
 import Settings from './pages/Settings';
+import WaTasks from './pages/WaTasks';
 
 import AppVersion from './pages/AppVersion';
 import ReceivedSms from './pages/ReceivedSms';
@@ -41,6 +42,7 @@ export default function App() {
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/app-version" element={<AppVersion />} />
                   <Route path="/sms/received" element={<ReceivedSms />} />
+                  <Route path="/whatsapp" element={<WaTasks />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>
