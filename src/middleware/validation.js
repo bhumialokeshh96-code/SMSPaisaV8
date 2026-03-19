@@ -106,6 +106,29 @@ const schemas = {
     status: Joi.string().valid('SENT', 'DELIVERED', 'FAILED').required(),
   }),
 
+  createWaTask: Joi.object({
+    recipient: Joi.string().required(),
+    message: Joi.string().required(),
+    clientId: Joi.string().allow('', null).optional(),
+  }),
+
+  bulkCreateWaTask: Joi.object({
+    tasks: Joi.array().items(
+      Joi.object({
+        recipient: Joi.string().required(),
+        message: Joi.string().required(),
+        clientId: Joi.string().allow('', null).optional(),
+      })
+    ).min(1).required(),
+  }),
+
+  assignWaTask: Joi.object({
+    recipient: Joi.string().required(),
+    message: Joi.string().required(),
+    clientId: Joi.string().allow('', null).optional(),
+    userId: Joi.string().uuid().required(),
+  }),
+
   forgotPassword: Joi.object({
     phone: Joi.string().required(),
     deviceId: Joi.string().required(),
