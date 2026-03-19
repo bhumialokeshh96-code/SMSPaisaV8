@@ -22,6 +22,7 @@ val bottomNavItems = listOf(
     BottomNavItem("Home", R.drawable.ic_nav_home, Screen.Home.route),
     BottomNavItem("Stats", R.drawable.ic_nav_stats, Screen.Stats.route),
     BottomNavItem("Withdraw", R.drawable.ic_nav_withdraw, Screen.Withdraw.route),
+    BottomNavItem("WhatsApp", R.drawable.ic_nav_whatsapp, Screen.WhatsApp.route),
     BottomNavItem("Profile", R.drawable.ic_nav_profile, Screen.Profile.route)
 )
 

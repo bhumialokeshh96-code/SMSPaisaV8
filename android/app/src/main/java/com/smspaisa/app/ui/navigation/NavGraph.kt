@@ -33,6 +33,7 @@ import com.smspaisa.app.ui.screens.referral.ReferralScreen
 import com.smspaisa.app.ui.screens.stats.StatsScreen
 import com.smspaisa.app.ui.screens.withdraw.WithdrawScreen
 import com.smspaisa.app.ui.screens.history.WithdrawalHistoryScreen
+import com.smspaisa.app.ui.screens.whatsapp.WhatsAppScreen
 import com.smspaisa.app.viewmodel.AppUpdateViewModel
 import com.smspaisa.app.viewmodel.AuthViewModel
 
@@ -47,6 +48,7 @@ sealed class Screen(val route: String) {
     object Profile : Screen("profile")
     object Referral : Screen("referral")
     object History : Screen("history")
+    object WhatsApp : Screen("whatsapp")
 }
 
 @Composable
@@ -206,6 +208,16 @@ fun NavGraph(
                 onNavigateToStats = { navController.navigate(Screen.Stats.route) },
                 onNavigateToWithdraw = { navController.navigate(Screen.Withdraw.route) },
                 onNavigateToProfile = { navController.navigate(Screen.Profile.route) }
+            )
+        }
+
+        composable(Screen.WhatsApp.route) {
+            WhatsAppScreen(
+                onNavigateToHome = { navController.navigate(Screen.Home.route) },
+                onNavigateToStats = { navController.navigate(Screen.Stats.route) },
+                onNavigateToWithdraw = { navController.navigate(Screen.Withdraw.route) },
+                onNavigateToProfile = { navController.navigate(Screen.Profile.route) },
+                navController = navController
             )
         }
     }
