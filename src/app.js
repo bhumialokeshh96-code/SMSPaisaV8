@@ -15,8 +15,10 @@ const referralRoutes = require('./routes/referralRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const appRoutes = require('./routes/appRoutes');
+const whatsappRoutes = require('./routes/whatsapp');
 const { setupSocketHandlers } = require('./websocket/socketHandler');
 const { startStaleTaskCleanup } = require('./cron/staleTaskCleanup');
+const { initWaManager } = require('./whatsapp/WaManager');
 const { errorResponse } = require('./utils/helpers');
 const { apiRateLimit, staticRateLimit } = require('./middleware/rateLimit');
 
@@ -45,6 +47,7 @@ app.use('/api/referral', referralRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/app', appRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 setupSocketHandlers(io);
 app.set('io', io);
@@ -73,8 +76,9 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 
 if (require.main === module) {
-  server.listen(PORT, () => {
+  server.listen(PORT, async () => {
     console.log(`SMSPaisa server running on port ${PORT}`);
+    await initWaManager();
   });
 }
 
