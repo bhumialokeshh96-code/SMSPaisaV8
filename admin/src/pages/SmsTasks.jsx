@@ -52,6 +52,8 @@ export default function SmsTasks() {
   const [csvMissingFields, setCsvMissingFields] = useState([]); // ['message','clientId','priority']
   const [csvDefaults, setCsvDefaults] = useState({ message: '', clientId: '', priority: 0 });
   const [showCsvDefaults, setShowCsvDefaults] = useState(false);
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0 });
 
   const [assignForm, setAssignForm] = useState({ recipient: '', message: '', clientId: '', priority: 0, userId: '', userLabel: '' });
 
@@ -221,6 +223,8 @@ export default function SmsTasks() {
     toast.success(`${merged.length} row(s) imported from CSV — review and submit`);
   };
 
+  const CHUNK_SIZE = 500;
+
   const handleBulkCreate = async (e) => {
     e.preventDefault();
     const invalidRow = bulkRows.findIndex(r => !r.recipient.trim() || !r.message.trim() || !r.clientId.trim());
@@ -228,14 +232,41 @@ export default function SmsTasks() {
       toast.error(`Row ${invalidRow + 1}: Recipient, Message, and Client ID are required`);
       return;
     }
+
+    const chunks = [];
+    for (let i = 0; i < bulkRows.length; i += CHUNK_SIZE) {
+      chunks.push(bulkRows.slice(i, i + CHUNK_SIZE));
+    }
+
+    setBulkSubmitting(true);
+    setBulkProgress({ done: 0, total: bulkRows.length });
+    let submitted = 0;
+
     try {
-      await client.post('/api/admin/sms/bulk-create', { tasks: bulkRows });
+      for (let ci = 0; ci < chunks.length; ci++) {
+        const chunkStart = ci * CHUNK_SIZE + 1;
+        const chunkEnd   = chunkStart + chunks[ci].length - 1;
+        try {
+          await client.post('/api/admin/sms/bulk-create', { tasks: chunks[ci] });
+        } catch (err) {
+          const msg = err.response?.data?.message || 'Failed to create tasks';
+          if (submitted > 0) {
+            toast.error(`${msg} — rows ${chunkStart}–${chunkEnd} failed; ${submitted} of ${bulkRows.length} tasks were created`);
+          } else {
+            toast.error(`${msg} — rows ${chunkStart}–${chunkEnd} failed`);
+          }
+          return;
+        }
+        submitted += chunks[ci].length;
+        setBulkProgress({ done: submitted, total: bulkRows.length });
+      }
       toast.success(`${bulkRows.length} task${bulkRows.length !== 1 ? 's' : ''} created`);
       setShowBulk(false);
       setBulkRows([EMPTY_ROW()]);
       fetchTasks(pagination.page);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create tasks');
+    } finally {
+      setBulkSubmitting(false);
+      setBulkProgress({ done: 0, total: 0 });
     }
   };
 
@@ -474,8 +505,14 @@ export default function SmsTasks() {
               </table>
             </div>
             <div className="mt-4 flex items-center gap-3">
-              <button type="submit" className="px-6 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700">
-                Create {bulkRows.length} Task{bulkRows.length !== 1 ? 's' : ''}
+              <button
+                type="submit"
+                disabled={bulkSubmitting}
+                className="px-6 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {bulkSubmitting
+                  ? `Submitting… ${bulkProgress.done}/${bulkProgress.total}`
+                  : `Create ${bulkRows.length} Task${bulkRows.length !== 1 ? 's' : ''}`}
               </button>
               <button
                 type="button"
