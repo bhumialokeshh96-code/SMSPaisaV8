@@ -107,21 +107,20 @@ fun HomeScreen(
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-    modifier = Modifier.height(72.dp), // optional but best
+    modifier = Modifier.height(72.dp),
     title = {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(60.dp), // FIXED
+                .wrapContentSize()
+                .height(60.dp),
             contentAlignment = Alignment.CenterStart
         ) {
             Image(
                 painter = painterResource(id = R.drawable.paisa_logo),
                 contentDescription = "SMSPaisa Logo",
-                contentScale = ContentScale.Fit, // FIXED
+                contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .height(56.dp) // FINAL SIZE
-                    .wrapContentWidth(Alignment.Start)
+                    .height(56.dp) // perfect size
             )
         }
     },
