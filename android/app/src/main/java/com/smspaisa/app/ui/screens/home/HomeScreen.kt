@@ -107,23 +107,27 @@ fun HomeScreen(
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-    modifier = Modifier.height(72.dp),
+    // 1. Increase the overall TopAppBar height (e.g., from 72.dp to 90.dp)
+    modifier = Modifier.height(90.dp), 
     title = {
         Box(
+            // 2. Increase the Box container height to match the TopAppBar
             modifier = Modifier
                 .wrapContentSize()
-                .height(60.dp),
+                .height(90.dp), 
             contentAlignment = Alignment.CenterStart
         ) {
             Image(
                 painter = painterResource(id = R.drawable.paisa_logo),
                 contentDescription = "SMSPaisa Logo",
                 contentScale = ContentScale.Fit,
+                // 3. Increase the actual Image height (e.g., from 56.dp to 80.dp)
                 modifier = Modifier
-                    .height(56.dp) // perfect size
+                    .height(80.dp) 
             )
         }
     },
+    
                 actions = {
                     IconButton(onClick = { viewModel.loadData() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
