@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smspaisa.app.data.api.ReferralEntry
 import com.smspaisa.app.ui.components.LottieLoading
@@ -160,7 +161,15 @@ fun ReferralScreen(
                     // Referral list
                     if (state.stats.referrals.isNotEmpty()) {
                         item {
-                            Text("Your Referrals", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                            Text(
+                                "Your Referrals",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    letterSpacing = 0.05.sp
+                                ),
+                                color = Color(0xCCFFFFFF)
+                            )
                         }
                         items(state.stats.referrals) { referral ->
                             ReferralItem(referral = referral)

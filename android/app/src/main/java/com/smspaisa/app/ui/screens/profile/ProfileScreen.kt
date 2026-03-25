@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smspaisa.app.R
 import com.smspaisa.app.ui.components.FloatingSupportButton
@@ -129,7 +130,15 @@ fun ProfileScreen(
 
                     // SMS Settings
                     item {
-                        Text("SMS Settings", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                        Text(
+                            "SMS Settings",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 0.05.sp
+                            ),
+                            color = Color(0xCCFFFFFF)
+                        )
                     }
                     item {
                         Card(
@@ -208,7 +217,15 @@ fun ProfileScreen(
 
                     // Payment section
                     item {
-                        Text("Payment & Referral", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                        Text(
+                            "Payment & Referral",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 0.05.sp
+                            ),
+                            color = Color(0xCCFFFFFF)
+                        )
                     }
                     item {
                         Card(

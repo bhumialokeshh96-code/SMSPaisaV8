@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smspaisa.app.R
@@ -195,7 +196,12 @@ fun HomeScreen(
                     item {
                         Text(
                             text = "Today's Activity",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 0.05.sp
+                            ),
+                            color = Color(0xCCFFFFFF)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(
@@ -224,7 +230,12 @@ fun HomeScreen(
                     item {
                         Text(
                             text = "Live Activity",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 0.05.sp
+                            ),
+                            color = Color(0xCCFFFFFF)
                         )
                     }
                     if (state.recentLogs.isEmpty()) {

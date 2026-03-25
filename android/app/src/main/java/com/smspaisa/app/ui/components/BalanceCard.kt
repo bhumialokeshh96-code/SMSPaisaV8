@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -52,17 +53,29 @@ fun BalanceCard(
                 .fillMaxWidth()
                 .padding(20.dp)
         ) {
+            // Title Text - Available Balance
             Text(
                 text = "Available Balance",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.8f)
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = 14.sp,
+                    letterSpacing = 0.05.sp,
+                    fontWeight = FontWeight.Medium
+                ),
+                color = Color(0xCCFFFFFF)
             )
             Spacer(modifier = Modifier.height(4.dp))
+            // Balance Amount with Glow Effect
             Text(
                 text = "₹%.2f".format(wallet.balance),
                 style = MaterialTheme.typography.headlineLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                color = Color(0xFFFFFFFF),
+                modifier = Modifier.shadow(
+                    elevation = 12.dp,
+                    shape = RoundedCornerShape(8.dp),
+                    clip = false
                 )
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -71,31 +84,45 @@ fun BalanceCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
+                    // Total Earned Label
                     Text(
                         text = "Total Earned",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.7f)
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 12.sp,
+                            letterSpacing = 0.03.sp
+                        ),
+                        color = Color(0xB3FFFFFF)
                     )
+                    // Total Earned Value
                     Text(
                         text = "₹%.2f".format(wallet.totalEarned),
                         style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
+                            letterSpacing = 0.02.sp
+                        ),
+                        color = Color(0xFFFFFFFF)
                     )
                 }
                 Column {
+                    // Withdrawn Label
                     Text(
                         text = "Withdrawn",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.7f)
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 12.sp,
+                            letterSpacing = 0.03.sp
+                        ),
+                        color = Color(0xB3FFFFFF)
                     )
+                    // Withdrawn Value
                     Text(
                         text = "₹%.2f".format(wallet.totalWithdrawn),
                         style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
+                            letterSpacing = 0.02.sp
+                        ),
+                        color = Color(0xFFFFFFFF)
                     )
                 }
             }
