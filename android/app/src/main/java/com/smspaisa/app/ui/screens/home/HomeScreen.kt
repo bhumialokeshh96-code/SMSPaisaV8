@@ -107,23 +107,24 @@ fun HomeScreen(
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(40.dp),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.paisa_logo),
-                            contentDescription = "SMSPaisa Logo",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .height(52.dp)
-                                .wrapContentWidth(Alignment.Start)
-                        )
-                    }
-                },
+    modifier = Modifier.height(72.dp), // optional but best
+    title = {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp), // FIXED
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.paisa_logo),
+                contentDescription = "SMSPaisa Logo",
+                contentScale = ContentScale.Fit, // FIXED
+                modifier = Modifier
+                    .height(56.dp) // FINAL SIZE
+                    .wrapContentWidth(Alignment.Start)
+            )
+        }
+    },
                 actions = {
                     IconButton(onClick = { viewModel.loadData() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
