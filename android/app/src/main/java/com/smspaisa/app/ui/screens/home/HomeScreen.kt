@@ -6,7 +6,9 @@ import android.os.Build
 import kotlinx.coroutines.launch
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -105,10 +107,14 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    when (val state = uiState) {
-                        is HomeUiState.Success -> Text("Hi, ${state.userName.split(" ").first()} 👋")
-                        else -> Text("SMSPaisa")
-                    }
+                    Image(
+                        painter = painterResource(id = R.drawable.sms_paisa_logo),
+                        contentDescription = "SMSPaisa Logo",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .height(40.dp)
+                            .fillMaxWidth()
+                    )
                 },
                 actions = {
                     IconButton(onClick = { viewModel.loadData() }) {
