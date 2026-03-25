@@ -2,17 +2,19 @@ package com.smspaisa.app.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.airbnb.lottie.compose.* // Lottie import zaroori hai
+import com.smspaisa.app.R // R import zaroori hai raw folder ke liye
 import com.smspaisa.app.model.SendingProgress
 import com.smspaisa.app.model.SendingStatus
 import com.smspaisa.app.ui.theme.Orange20
@@ -36,7 +38,17 @@ fun EarningToggle(
     )
 
     val activeColor = MaterialTheme.colorScheme.secondary
-    val inactiveColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+    
+    // Lottie Animation setup
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.play_button))
+    
+    // Animation ki speed aur state manage karne ke liye
+    // Agar isActive true hai toh animation play hogi, warna ruk jayegi
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        isPlaying = isActive,
+        iterations = LottieConstants.IterateForever // Animation lagatar chalane ke liye
+    )
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -68,25 +80,20 @@ fun EarningToggle(
                         )
                 )
             }
-            // Main button
-            Button(
-                onClick = { onToggle(!isActive) },
-                modifier = Modifier.size(90.dp),
-                shape = CircleShape,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isActive) activeColor else inactiveColor
-                ),
-                elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = if (isActive) 8.dp else 2.dp
-                )
+            
+            // Lottie Animation as Main Button
+            Box(
+                modifier = Modifier
+                    .size(90.dp)
+                    .clip(CircleShape)
+                    .background(Color.Transparent) // Button ka default color ab transparent hai
+                    .clickable { onToggle(!isActive) }, // Tap karne par toggle hoga
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = if (isActive) "STOP" else "START",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        fontSize = 16.sp
-                    )
+                LottieAnimation(
+                    composition = composition,
+                    progress = { progress },
+                    modifier = Modifier.fillMaxSize()
                 )
             }
         }
@@ -98,8 +105,8 @@ fun EarningToggle(
                     SendingStatus.WAITING -> sendingProgress.errorMessage ?: "Waiting for tasks..."
                     SendingStatus.FETCHING -> "Fetching tasks..."
                     SendingStatus.ROUND_COMPLETE -> "Round complete!"
-                    SendingStatus.VERIFYING -> "Verifying delivery..."
-                    SendingStatus.REPORTING -> "Reporting to server..."
+                    SendingStatus.VERIFYING -> "Verifying..."
+                    SendingStatus.REPORTING -> "Reporting..."
                     SendingStatus.ERROR -> sendingProgress.errorMessage ?: "Error occurred"
                     else -> "Service is running"
                 }
