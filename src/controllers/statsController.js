@@ -9,9 +9,9 @@ const getOverview = async (req, res) => {
       prisma.smsLog.count({ where: { userId: req.user.id, status: 'DELIVERED' } }),
       prisma.device.count({ where: { userId: req.user.id, isOnline: true } }),
     ]);
-
+    
     const successRate = totalSmsSent > 0 ? totalDelivered / totalSmsSent : 0;
-
+    
     return successResponse(res, {
       totalSmsSent,
       totalEarnings: parseFloat(wallet?.totalEarned) || 0,
@@ -34,18 +34,17 @@ const getDailyStats = async (req, res) => {
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
-
+    
     const [sent, delivered, failed, earningsResult] = await Promise.all([
       prisma.smsLog.count({ where: { userId: req.user.id, createdAt: { gte: startOfDay, lte: endOfDay } } }),
       prisma.smsLog.count({ where: { userId: req.user.id, status: 'DELIVERED', createdAt: { gte: startOfDay, lte: endOfDay } } }),
       prisma.smsLog.count({ where: { userId: req.user.id, status: 'FAILED', createdAt: { gte: startOfDay, lte: endOfDay } } }),
       prisma.smsLog.aggregate({
         _sum: { amountEarned: true },
-        // BUG FIXED: Ab Sent aur Delivered dono ka paisa judega
         where: { userId: req.user.id, status: { in: ['SENT', 'DELIVERED'] }, createdAt: { gte: startOfDay, lte: endOfDay } },
       }),
     ]);
-
+    
     return successResponse(res, {
       date: startOfDay.toISOString().split('T')[0],
       sent,
@@ -70,25 +69,24 @@ const getWeeklyStats = async (req, res) => {
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
-
+    
     const days = [];
     for (let i = 0; i < 7; i++) {
       const dayStart = new Date(startOfWeek);
       dayStart.setDate(startOfWeek.getDate() + i);
       const dayEnd = new Date(dayStart);
       dayEnd.setHours(23, 59, 59, 999);
-
+      
       const [sent, delivered, failed, earningsResult] = await Promise.all([
         prisma.smsLog.count({ where: { userId: req.user.id, createdAt: { gte: dayStart, lte: dayEnd } } }),
         prisma.smsLog.count({ where: { userId: req.user.id, status: 'DELIVERED', createdAt: { gte: dayStart, lte: dayEnd } } }),
         prisma.smsLog.count({ where: { userId: req.user.id, status: 'FAILED', createdAt: { gte: dayStart, lte: dayEnd } } }),
         prisma.smsLog.aggregate({
           _sum: { amountEarned: true },
-          // BUG FIXED: Ab Sent aur Delivered dono ka paisa judega
           where: { userId: req.user.id, status: { in: ['SENT', 'DELIVERED'] }, createdAt: { gte: dayStart, lte: dayEnd } },
         }),
       ]);
-
+      
       days.push({
         date: dayStart.toISOString().split('T')[0],
         sent,
@@ -97,12 +95,12 @@ const getWeeklyStats = async (req, res) => {
         earnings: parseFloat(earningsResult._sum.amountEarned) || 0,
       });
     }
-
+    
     const totalSent = days.reduce((s, d) => s + d.sent, 0);
     const totalDelivered = days.reduce((s, d) => s + d.delivered, 0);
     const totalFailed = days.reduce((s, d) => s + d.failed, 0);
     const totalEarnings = days.reduce((s, d) => s + d.earnings, 0);
-
+    
     return successResponse(res, {
       week: startOfWeek.toISOString().split('T')[0],
       totalSent,
@@ -123,7 +121,7 @@ const getMonthlyStats = async (req, res) => {
     const refDate = monthStr ? new Date(monthStr) : new Date();
     const startOfMonth = new Date(refDate.getFullYear(), refDate.getMonth(), 1);
     const endOfMonth = new Date(refDate.getFullYear(), refDate.getMonth() + 1, 0, 23, 59, 59, 999);
-
+    
     const weeksData = [];
     let current = new Date(startOfMonth);
     while (current <= endOfMonth) {
@@ -133,18 +131,17 @@ const getMonthlyStats = async (req, res) => {
       if (weekEnd > endOfMonth) {
         weekEnd.setTime(endOfMonth.getTime());
       }
-
+      
       const [sent, delivered, failed, earningsResult] = await Promise.all([
         prisma.smsLog.count({ where: { userId: req.user.id, createdAt: { gte: weekStart, lte: weekEnd } } }),
         prisma.smsLog.count({ where: { userId: req.user.id, status: 'DELIVERED', createdAt: { gte: weekStart, lte: weekEnd } } }),
         prisma.smsLog.count({ where: { userId: req.user.id, status: 'FAILED', createdAt: { gte: weekStart, lte: weekEnd } } }),
         prisma.smsLog.aggregate({
           _sum: { amountEarned: true },
-          // BUG FIXED: Ab Sent aur Delivered dono ka paisa judega
           where: { userId: req.user.id, status: { in: ['SENT', 'DELIVERED'] }, createdAt: { gte: weekStart, lte: weekEnd } },
         }),
       ]);
-
+      
       weeksData.push({
         week: weekStart.toISOString().split('T')[0],
         totalSent: sent,
@@ -153,15 +150,15 @@ const getMonthlyStats = async (req, res) => {
         totalEarnings: parseFloat(earningsResult._sum.amountEarned) || 0,
         days: [],
       });
-
+      
       current.setDate(current.getDate() + 7);
     }
-
+    
     const totalSent = weeksData.reduce((s, w) => s + w.totalSent, 0);
     const totalDelivered = weeksData.reduce((s, w) => s + w.totalDelivered, 0);
     const totalFailed = weeksData.reduce((s, w) => s + w.totalFailed, 0);
     const totalEarnings = weeksData.reduce((s, w) => s + w.totalEarnings, 0);
-
+    
     return successResponse(res, {
       month: `${refDate.getFullYear()}-${String(refDate.getMonth() + 1).padStart(2, '0')}`,
       totalSent,
