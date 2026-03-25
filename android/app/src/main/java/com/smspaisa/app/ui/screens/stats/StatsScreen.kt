@@ -231,13 +231,14 @@ fun StatsScreen(
                             StatsCard(
                                 title = "Sent",
                                 value = totalSent.toString(),
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                cardType = "sent"
                             )
                             StatsCard(
                                 title = "Delivered",
                                 value = totalDelivered.toString(),
                                 modifier = Modifier.weight(1f),
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                cardType = "delivered"
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
@@ -249,13 +250,13 @@ fun StatsScreen(
                                 title = "Failed",
                                 value = totalFailed.toString(),
                                 modifier = Modifier.weight(1f),
-                                containerColor = MaterialTheme.colorScheme.errorContainer
+                                cardType = "failed"
                             )
                             StatsCard(
                                 title = "Earnings",
                                 value = "₹%.2f".format(totalEarnings),
                                 modifier = Modifier.weight(1f),
-                                containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                                cardType = "earned"
                             )
                         }
                     }

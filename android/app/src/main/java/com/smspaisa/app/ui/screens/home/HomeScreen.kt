@@ -211,19 +211,20 @@ fun HomeScreen(
                             StatsCard(
                                 title = "Sent",
                                 value = state.todayStats.sent.toString(),
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                cardType = "sent"
                             )
                             StatsCard(
                                 title = "Delivered",
                                 value = state.todayStats.delivered.toString(),
                                 modifier = Modifier.weight(1f),
-                                containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
+                                cardType = "delivered"
                             )
                             StatsCard(
                                 title = "Earned",
                                 value = "₹%.2f".format(state.todayStats.earnings),
                                 modifier = Modifier.weight(1f),
-                                containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
+                                cardType = "earned"
                             )
                         }
                     }
