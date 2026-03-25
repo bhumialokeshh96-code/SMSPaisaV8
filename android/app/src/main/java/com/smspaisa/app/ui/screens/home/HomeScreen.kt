@@ -119,7 +119,7 @@ fun HomeScreen(
                             contentDescription = "SMSPaisa Logo",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .height(36.dp)
+                                .height(52.dp)
                                 .wrapContentWidth(Alignment.Start)
                         )
                     }
