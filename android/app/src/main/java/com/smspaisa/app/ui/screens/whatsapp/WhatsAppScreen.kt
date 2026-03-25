@@ -384,8 +384,12 @@ private fun LinkedContent(linkedNumber: String, onUnlink: () -> Unit) {
 
         Text(
             text = "WhatsApp Dashboard",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.05.sp
+            ),
+            color = Color(0xCCFFFFFF),
             modifier = Modifier.align(Alignment.Start)
         )
 

@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smspaisa.app.R
 import com.smspaisa.app.model.DailyStats
@@ -190,7 +191,12 @@ fun StatsScreen(
                     item {
                         Text(
                             "Breakdown",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 0.05.sp
+                            ),
+                            color = Color(0xCCFFFFFF)
                         )
                     }
                     item {

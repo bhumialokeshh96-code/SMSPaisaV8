@@ -12,6 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smspaisa.app.ui.components.LottieLoading
 import com.smspaisa.app.viewmodel.AuthUiState
@@ -46,12 +47,18 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "Create Account",
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold
+            )
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Register to start earning",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 14.sp,
+                letterSpacing = 0.05.sp
+            ),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
         )
         Spacer(modifier = Modifier.height(32.dp))

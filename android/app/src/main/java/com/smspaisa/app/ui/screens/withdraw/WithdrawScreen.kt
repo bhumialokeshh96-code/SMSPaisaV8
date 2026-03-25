@@ -16,6 +16,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smspaisa.app.R
 import com.smspaisa.app.data.api.PaymentAccount
@@ -158,7 +159,15 @@ fun WithdrawScreen(
 
                     // Method selector
                     item {
-                        Text("Payment Method", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                        Text(
+                            "Payment Method",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 0.05.sp
+                            ),
+                            color = Color(0xCCFFFFFF)
+                        )
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf("UPI", "BANK").forEach { method ->
@@ -179,7 +188,15 @@ fun WithdrawScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("Payment Accounts", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                                Text(
+                                    "Payment Accounts",
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        letterSpacing = 0.05.sp
+                                    ),
+                                    color = Color(0xCCFFFFFF)
+                                )
                                 TextButton(onClick = {
                                     if (selectedMethod == "UPI") showAddUpiDialog = true
                                     else showAddBankDialog = true
@@ -214,7 +231,15 @@ fun WithdrawScreen(
 
                     // Amount input
                     item {
-                        Text("Amount", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                        Text(
+                            "Amount",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 0.05.sp
+                            ),
+                            color = Color(0xCCFFFFFF)
+                        )
                         Spacer(Modifier.height(8.dp))
                         OutlinedTextField(
                             value = amountInput,
@@ -253,7 +278,15 @@ fun WithdrawScreen(
                     readyState?.let { ready ->
                         if (ready.withdrawHistory.isNotEmpty()) {
                             item {
-                                Text("Recent Withdrawals", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                                Text(
+                                    "Recent Withdrawals",
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        letterSpacing = 0.05.sp
+                                    ),
+                                    color = Color(0xCCFFFFFF)
+                                )
                             }
                             items(ready.withdrawHistory) { txn ->
                                 Card(
