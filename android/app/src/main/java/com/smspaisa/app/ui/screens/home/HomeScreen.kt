@@ -115,7 +115,7 @@ fun HomeScreen(
                         contentAlignment = Alignment.CenterStart
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.sms_paisa_logo),
+                            painter = painterResource(id = R.drawable.paisa_logo),
                             contentDescription = "SMSPaisa Logo",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
