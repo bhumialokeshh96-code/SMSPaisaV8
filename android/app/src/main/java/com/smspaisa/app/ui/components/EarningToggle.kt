@@ -13,8 +13,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.airbnb.lottie.compose.* // Lottie import zaroori hai
-import com.smspaisa.app.R // R import zaroori hai raw folder ke liye
+import com.airbnb.lottie.compose.*
+import com.smspaisa.app.R
 import com.smspaisa.app.model.SendingProgress
 import com.smspaisa.app.model.SendingStatus
 import com.smspaisa.app.ui.theme.Orange20
@@ -42,12 +42,14 @@ fun EarningToggle(
     // Lottie Animation setup
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.play_button))
     
-    // Animation ki speed aur state manage karne ke liye
-    // Agar isActive true hai toh animation play hogi, warna ruk jayegi
-    val progress by animateLottieCompositionAsState(
-        composition = composition,
-        isPlaying = isActive,
-        iterations = LottieConstants.IterateForever // Animation lagatar chalane ke liye
+    // Toggle Animation Logic: Play to Stop (Forward) and Stop to Play (Reverse)
+    val progress by animateFloatAsState(
+        targetValue = if (isActive) 1f else 0f, // 1f matlab end (Stop icon), 0f matlab start (Play icon)
+        animationSpec = tween(
+            durationMillis = composition?.duration?.toInt() ?: 600, // Lottie file ki original speed use karega
+            easing = LinearEasing
+        ),
+        label = "LottieToggle"
     )
 
     Column(
@@ -86,13 +88,13 @@ fun EarningToggle(
                 modifier = Modifier
                     .size(90.dp)
                     .clip(CircleShape)
-                    .background(Color.Transparent) // Button ka default color ab transparent hai
-                    .clickable { onToggle(!isActive) }, // Tap karne par toggle hoga
+                    .background(Color.Transparent) 
+                    .clickable { onToggle(!isActive) }, // Tap karne par animation toggle hoga
                 contentAlignment = Alignment.Center
             ) {
                 LottieAnimation(
                     composition = composition,
-                    progress = { progress },
+                    progress = { progress }, // Custom progress attach kiya
                     modifier = Modifier.fillMaxSize()
                 )
             }
