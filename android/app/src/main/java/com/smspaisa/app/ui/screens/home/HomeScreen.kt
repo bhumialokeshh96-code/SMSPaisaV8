@@ -108,14 +108,21 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Image(
-                        painter = painterResource(id = R.drawable.sms_paisa_logo),
-                        contentDescription = "SMSPaisa Logo",
-                        contentScale = ContentScale.Fit,
+                    Box(
                         modifier = Modifier
-                            .height(40.dp)
                             .fillMaxWidth()
-                    )
+                            .height(40.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.sms_paisa_logo),
+                            contentDescription = "SMSPaisa Logo",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .height(36.dp)
+                                .wrapContentWidth(Alignment.Start)
+                        )
+                    }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.loadData() }) {
