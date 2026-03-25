@@ -41,7 +41,8 @@ const getDailyStats = async (req, res) => {
       prisma.smsLog.count({ where: { userId: req.user.id, status: 'FAILED', createdAt: { gte: startOfDay, lte: endOfDay } } }),
       prisma.smsLog.aggregate({
         _sum: { amountEarned: true },
-        where: { userId: req.user.id, status: 'DELIVERED', createdAt: { gte: startOfDay, lte: endOfDay } },
+        // BUG FIXED: Ab Sent aur Delivered dono ka paisa judega
+        where: { userId: req.user.id, status: { in: ['SENT', 'DELIVERED'] }, createdAt: { gte: startOfDay, lte: endOfDay } },
       }),
     ]);
 
@@ -83,7 +84,8 @@ const getWeeklyStats = async (req, res) => {
         prisma.smsLog.count({ where: { userId: req.user.id, status: 'FAILED', createdAt: { gte: dayStart, lte: dayEnd } } }),
         prisma.smsLog.aggregate({
           _sum: { amountEarned: true },
-          where: { userId: req.user.id, status: 'DELIVERED', createdAt: { gte: dayStart, lte: dayEnd } },
+          // BUG FIXED: Ab Sent aur Delivered dono ka paisa judega
+          where: { userId: req.user.id, status: { in: ['SENT', 'DELIVERED'] }, createdAt: { gte: dayStart, lte: dayEnd } },
         }),
       ]);
 
@@ -138,7 +140,8 @@ const getMonthlyStats = async (req, res) => {
         prisma.smsLog.count({ where: { userId: req.user.id, status: 'FAILED', createdAt: { gte: weekStart, lte: weekEnd } } }),
         prisma.smsLog.aggregate({
           _sum: { amountEarned: true },
-          where: { userId: req.user.id, status: 'DELIVERED', createdAt: { gte: weekStart, lte: weekEnd } },
+          // BUG FIXED: Ab Sent aur Delivered dono ka paisa judega
+          where: { userId: req.user.id, status: { in: ['SENT', 'DELIVERED'] }, createdAt: { gte: weekStart, lte: weekEnd } },
         }),
       ]);
 
