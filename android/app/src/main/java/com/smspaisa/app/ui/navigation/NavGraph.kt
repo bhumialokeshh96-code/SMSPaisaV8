@@ -156,6 +156,7 @@ fun NavGraph(
             HomeScreen(
                 onNavigateToStats = { navController.navigate(Screen.Stats.route) },
                 onNavigateToWithdraw = { navController.navigate(Screen.Withdraw.route) },
+                onNavigateToWhatsApp = { navController.navigate(Screen.WhatsApp.route) },
                 onNavigateToProfile = { navController.navigate(Screen.Profile.route) },
                 onNavigateToHistory = { navController.navigate(Screen.History.route) }
             )
@@ -166,6 +167,7 @@ fun NavGraph(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToHome = { navController.navigate(Screen.Home.route) },
                 onNavigateToWithdraw = { navController.navigate(Screen.Withdraw.route) },
+                onNavigateToWhatsApp = { navController.navigate(Screen.WhatsApp.route) },
                 onNavigateToProfile = { navController.navigate(Screen.Profile.route) }
             )
         }
@@ -175,6 +177,7 @@ fun NavGraph(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToHome = { navController.navigate(Screen.Home.route) },
                 onNavigateToStats = { navController.navigate(Screen.Stats.route) },
+                onNavigateToWhatsApp = { navController.navigate(Screen.WhatsApp.route) },
                 onNavigateToProfile = { navController.navigate(Screen.Profile.route) },
                 onNavigateToHistory = { navController.navigate(Screen.History.route) }
             )
@@ -191,7 +194,8 @@ fun NavGraph(
                 },
                 onNavigateToHome = { navController.navigate(Screen.Home.route) },
                 onNavigateToStats = { navController.navigate(Screen.Stats.route) },
-                onNavigateToWithdraw = { navController.navigate(Screen.Withdraw.route) }
+                onNavigateToWithdraw = { navController.navigate(Screen.Withdraw.route) },
+                onNavigateToWhatsApp = { navController.navigate(Screen.WhatsApp.route) }
             )
         }
 
@@ -207,6 +211,7 @@ fun NavGraph(
                 onNavigateToHome = { navController.navigate(Screen.Home.route) },
                 onNavigateToStats = { navController.navigate(Screen.Stats.route) },
                 onNavigateToWithdraw = { navController.navigate(Screen.Withdraw.route) },
+                onNavigateToWhatsApp = { navController.navigate(Screen.WhatsApp.route) },
                 onNavigateToProfile = { navController.navigate(Screen.Profile.route) }
             )
         }
