@@ -201,19 +201,22 @@ data class SupportLinks(
 // --- WhatsApp ---
 
 @Keep
-data class WhatsAppPairRequest(
-    @SerializedName("phoneNumber") val phoneNumber: String
+data class WhatsAppBindRequest(
+    @SerializedName("phone") val phone: String
 )
 
 @Keep
-data class WhatsAppPairResponse(
-    @SerializedName("code") val code: String
+data class WhatsAppBindResponse(
+    @SerializedName("status") val status: String,
+    @SerializedName("message") val message: String,
+    @SerializedName("pairingCode") val pairingCode: String?
 )
 
 @Keep
 data class WhatsAppStatusResponse(
+    @SerializedName("phone") val phone: String?,
     @SerializedName("status") val status: String,
-    @SerializedName("number") val number: String?
+    @SerializedName("sendTime") val sendTime: Int
 )
 
 interface ApiService {
@@ -345,8 +348,8 @@ interface ApiService {
 
     // --- WhatsApp ---
 
-    @POST("api/whatsapp/pair")
-    suspend fun requestWhatsAppPairing(@Body request: WhatsAppPairRequest): Response<ApiResponse<WhatsAppPairResponse>>
+    @POST("api/whatsapp/bind")
+    suspend fun bindWhatsApp(@Body request: WhatsAppBindRequest): Response<ApiResponse<WhatsAppBindResponse>>
 
     @GET("api/whatsapp/status")
     suspend fun getWhatsAppStatus(): Response<ApiResponse<WhatsAppStatusResponse>>
