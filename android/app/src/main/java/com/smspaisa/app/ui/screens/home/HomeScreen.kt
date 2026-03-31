@@ -37,6 +37,7 @@ import com.smspaisa.app.viewmodel.HomeViewModel
 fun HomeScreen(
     onNavigateToStats: () -> Unit,
     onNavigateToWithdraw: () -> Unit,
+    onNavigateToWhatsApp: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToHistory: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
@@ -156,6 +157,12 @@ fun HomeScreen(
                     onClick = onNavigateToWithdraw,
                     icon = { Icon(painterResource(R.drawable.ic_nav_withdraw), contentDescription = null, modifier = androidx.compose.ui.Modifier.size(24.dp)) },
                     label = { Text("Withdraw") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = onNavigateToWhatsApp,
+                    icon = { Icon(painterResource(R.drawable.ic_nav_whatsapp), contentDescription = null, modifier = androidx.compose.ui.Modifier.size(24.dp)) },
+                    label = { Text("WhatsApp") }
                 )
                 NavigationBarItem(
                     selected = false,
