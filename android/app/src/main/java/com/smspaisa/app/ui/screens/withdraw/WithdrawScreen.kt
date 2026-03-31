@@ -32,6 +32,7 @@ fun WithdrawScreen(
     onNavigateBack: () -> Unit,
     onNavigateToHome: () -> Unit,
     onNavigateToStats: () -> Unit,
+    onNavigateToWhatsApp: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToHistory: () -> Unit,
     viewModel: WithdrawViewModel = hiltViewModel()
@@ -88,6 +89,7 @@ fun WithdrawScreen(
                 NavigationBarItem(false, onNavigateToHome, { Icon(painterResource(R.drawable.ic_nav_home), null, modifier = androidx.compose.ui.Modifier.size(24.dp)) }, label = { Text("Home") })
                 NavigationBarItem(false, onNavigateToStats, { Icon(painterResource(R.drawable.ic_nav_stats), null, modifier = androidx.compose.ui.Modifier.size(24.dp)) }, label = { Text("Stats") })
                 NavigationBarItem(true, {}, { Icon(painterResource(R.drawable.ic_nav_withdraw), null, modifier = androidx.compose.ui.Modifier.size(24.dp)) }, label = { Text("Withdraw") })
+                NavigationBarItem(false, onNavigateToWhatsApp, { Icon(painterResource(R.drawable.ic_nav_whatsapp), null, modifier = androidx.compose.ui.Modifier.size(24.dp)) }, label = { Text("WhatsApp") })
                 NavigationBarItem(false, onNavigateToProfile, { Icon(painterResource(R.drawable.ic_nav_profile), null, modifier = androidx.compose.ui.Modifier.size(24.dp)) }, label = { Text("Profile") })
             }
         }
