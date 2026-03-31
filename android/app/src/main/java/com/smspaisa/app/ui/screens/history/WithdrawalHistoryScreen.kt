@@ -37,6 +37,7 @@ fun WithdrawalHistoryScreen(
     onNavigateToHome: () -> Unit,
     onNavigateToStats: () -> Unit,
     onNavigateToWithdraw: () -> Unit,
+    onNavigateToWhatsApp: () -> Unit,
     onNavigateToProfile: () -> Unit,
     viewModel: WithdrawalHistoryViewModel = hiltViewModel()
 ) {
@@ -65,6 +66,7 @@ fun WithdrawalHistoryScreen(
                 NavigationBarItem(false, onNavigateToHome, { Icon(painterResource(R.drawable.ic_nav_home), null, modifier = Modifier.size(24.dp)) }, label = { Text("Home") })
                 NavigationBarItem(false, onNavigateToStats, { Icon(painterResource(R.drawable.ic_nav_stats), null, modifier = Modifier.size(24.dp)) }, label = { Text("Stats") })
                 NavigationBarItem(false, onNavigateToWithdraw, { Icon(painterResource(R.drawable.ic_nav_withdraw), null, modifier = Modifier.size(24.dp)) }, label = { Text("Withdraw") })
+                NavigationBarItem(false, onNavigateToWhatsApp, { Icon(painterResource(R.drawable.ic_nav_whatsapp), null, modifier = Modifier.size(24.dp)) }, label = { Text("WhatsApp") })
                 NavigationBarItem(false, onNavigateToProfile, { Icon(painterResource(R.drawable.ic_nav_profile), null, modifier = Modifier.size(24.dp)) }, label = { Text("Profile") })
             }
         }
@@ -173,4 +175,3 @@ private fun WithdrawalHistoryItem(txn: Transaction) {
         }
     }
 }
-
