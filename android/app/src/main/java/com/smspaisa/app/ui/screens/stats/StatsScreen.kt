@@ -28,6 +28,7 @@ fun StatsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToHome: () -> Unit,
     onNavigateToWithdraw: () -> Unit,
+    onNavigateToWhatsApp: () -> Unit,
     onNavigateToProfile: () -> Unit,
     viewModel: StatsViewModel = hiltViewModel()
 ) {
@@ -72,6 +73,12 @@ fun StatsScreen(
                     onClick = onNavigateToWithdraw,
                     icon = { Icon(painterResource(R.drawable.ic_nav_withdraw), null, modifier = androidx.compose.ui.Modifier.size(24.dp)) },
                     label = { Text("Withdraw") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = onNavigateToWhatsApp,
+                    icon = { Icon(painterResource(R.drawable.ic_nav_whatsapp), null, modifier = androidx.compose.ui.Modifier.size(24.dp)) },
+                    label = { Text("WhatsApp") }
                 )
                 NavigationBarItem(
                     selected = false,
