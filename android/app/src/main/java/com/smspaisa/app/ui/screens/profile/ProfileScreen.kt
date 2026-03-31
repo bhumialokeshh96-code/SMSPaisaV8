@@ -30,6 +30,7 @@ fun ProfileScreen(
     onNavigateToHome: () -> Unit,
     onNavigateToStats: () -> Unit,
     onNavigateToWithdraw: () -> Unit,
+    onNavigateToWhatsApp: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -75,6 +76,7 @@ fun ProfileScreen(
                 NavigationBarItem(false, onNavigateToHome, { Icon(painterResource(R.drawable.ic_nav_home), null, modifier = androidx.compose.ui.Modifier.size(24.dp)) }, label = { Text("Home") })
                 NavigationBarItem(false, onNavigateToStats, { Icon(painterResource(R.drawable.ic_nav_stats), null, modifier = androidx.compose.ui.Modifier.size(24.dp)) }, label = { Text("Stats") })
                 NavigationBarItem(false, onNavigateToWithdraw, { Icon(painterResource(R.drawable.ic_nav_withdraw), null, modifier = androidx.compose.ui.Modifier.size(24.dp)) }, label = { Text("Withdraw") })
+                NavigationBarItem(false, onNavigateToWhatsApp, { Icon(painterResource(R.drawable.ic_nav_whatsapp), null, modifier = androidx.compose.ui.Modifier.size(24.dp)) }, label = { Text("WhatsApp") })
                 NavigationBarItem(true, {}, { Icon(painterResource(R.drawable.ic_nav_profile), null, modifier = androidx.compose.ui.Modifier.size(24.dp)) }, label = { Text("Profile") })
             }
         }
